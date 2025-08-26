@@ -59,8 +59,8 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
     subject: '',
     duration: 120,
     instructions: '',
-    semester: 'Spring 2024',
-    academicYear: '2023-2024',
+    semester: '',
+    academicYear: '',
     selectedQuestions: []
   });
 
@@ -151,8 +151,8 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
         subject: '',
         duration: 120,
         instructions: '',
-        semester: 'Spring 2024',
-        academicYear: '2023-2024',
+        semester: '',
+        academicYear: '',
         selectedQuestions: []
       });
 
@@ -436,29 +436,26 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Semester
                           </label>
-                          <select
+                          <input
+                            type="text"
                             value={createExamData.semester}
                             onChange={(e) => setCreateExamData(prev => ({ ...prev, semester: e.target.value }))}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          >
-                            <option value="Spring 2024">Spring 2024</option>
-                            <option value="Fall 2024">Fall 2024</option>
-                            <option value="Summer 2024">Summer 2024</option>
-                          </select>
+                            placeholder="e.g., Spring 2024"
+                          />
                         </div>
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Academic Year
                           </label>
-                          <select
+                          <input
+                            type="text"
                             value={createExamData.academicYear}
                             onChange={(e) => setCreateExamData(prev => ({ ...prev, academicYear: e.target.value }))}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          >
-                            <option value="2023-2024">2023-2024</option>
-                            <option value="2024-2025">2024-2025</option>
-                          </select>
+                            placeholder="e.g., 2023-2024"
+                          />
                         </div>
                       </div>
 
