@@ -476,31 +476,6 @@ export const Login: React.FC = () => {
           )}
         </div>
 
-        {/* Demo Accounts - Only show on login */}
-        {!showSignUp && (
-          <div className="mt-8 bg-gray-50 rounded-xl p-6 border border-gray-200">
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">Demo Accounts (Any password works)</h3>
-            <div>
-              {demoAccounts.map((account, index) => (
-                <button
-                  key={index}
-                  onClick={() => {
-                    setEmail(account.email);
-                    setPassword('demo');
-                  }}
-                  className="w-full text-left p-3 bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors mb-2 last:mb-0"
-                >
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-900">{account.email}</span>
-                    <span className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">
-                      {account.role}
-                    </span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
 
         <p className="text-center text-xs text-gray-600 mt-6">
           © 2024 Faculty of Medicine, IPB University. All rights reserved.
