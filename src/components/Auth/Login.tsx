@@ -503,12 +503,3 @@ export const Login: React.FC = () => {
         )}
 
         <p className="text-center text-xs text-gray-600 mt-6">
-          {showSignUp 
-            ? 'By creating an account, you agree to our terms of service and privacy policy.'
-            : 'This is a demonstration system. In production, proper authentication and verification would be implemented.'
-          }
-        </p>
-      </div>
-    </div>
-  );
-};
