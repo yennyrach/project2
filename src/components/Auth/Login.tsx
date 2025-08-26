@@ -498,8 +498,14 @@ export const Login: React.FC = () => {
                   </div>
                 </button>
               ))}
-              </div>
+            </div>
           </div>
         )}
 
         <p className="text-center text-xs text-gray-600 mt-6">
+          © 2024 Faculty of Medicine, IPB University. All rights reserved.
+        </p>
+      </div>
+    </div>
+  );
+};
