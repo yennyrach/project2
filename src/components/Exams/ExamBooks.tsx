@@ -423,6 +423,8 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
     console.log('🧪 Running ExamBooks functionality tests...');
     
     // Test 1: Load exam books
+  };
+  
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -441,6 +443,12 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
             <span>Test</span>
           </button>
           <button
+            onClick={() => setShowCreateModal(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+          >
+            <Plus size={20} />
+            <span>Create Exam Book</span>
+          </button>
         </div>
       </div>
 
