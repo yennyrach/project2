@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useQuestions } from '../../context/QuestionContext';
-import { Question, ExamBook } from '../../types';
+import { ExamBook, Question } from '../../types';
 import { ExamBookStorage } from '../../utils/examBookStorage';
 import { 
   BookOpen, 
@@ -11,33 +11,21 @@ import {
   Eye, 
   Edit, 
   Trash2, 
-  Download,
-  FileText,
-  Clock,
-  Users,
+  Save, 
+  X, 
   CheckCircle,
   AlertTriangle,
-  X,
-  Save,
   Calendar,
-  User,
-  Building
+  Clock,
+  FileText,
+  Users,
+  Settings,
+  Check
 } from 'lucide-react';
 
 interface ExamBooksProps {
   shouldOpenCreateModal?: boolean;
   onModalOpened?: () => void;
-}
-
-interface CreateExamBookData {
-  title: string;
-  description: string;
-  subject: string;
-  duration: number;
-  instructions: string;
-  semester: string;
-  academicYear: string;
-  selectedQuestions: string[];
 }
 
 export const ExamBooks: React.FC<ExamBooksProps> = ({ 
@@ -48,269 +36,36 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
   const { questions } = useQuestions();
   const [examBooks, setExamBooks] = useState<ExamBook[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showQuestionDetails, setShowQuestionDetails] = useState(false);
-  const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedSubject, setSelectedSubject] = useState('all');
-  const [isLoading, setIsLoading] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showFinalizeConfirm, setShowFinalizeConfirm] = useState(false);
   const [selectedExamBook, setSelectedExamBook] = useState<ExamBook | null>(null);
-  const [editExamData, setEditExamData] = useState<CreateExamBookData>({
-    title: '',
-    description: '',
-    subject: '',
-    duration: 120,
-    instructions: '',
-    semester: '',
-    academicYear: '',
-    selectedQuestions: []
-  });
-  const [createExamData, setCreateExamData] = useState<CreateExamBookData>({
-    title: '',
-    description: '',
-    subject: '',
-    duration: 120,
-    instructions: '',
-    semester: '',
-    academicYear: '',
-    selectedQuestions: []
-  });
-
-  // Question search and filter states for the modal
+  const [examBookToDelete, setExamBookToDelete] = useState<string | null>(null);
+  const [examBookToFinalize, setExamBookToFinalize] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [submitMessage, setSubmitMessage] = useState('');
+  
+  // Question selection and filtering
+  const [selectedQuestions, setSelectedQuestions] = useState<string[]>([]);
   const [questionSearchTerm, setQuestionSearchTerm] = useState('');
   const [questionSubjectFilter, setQuestionSubjectFilter] = useState('all');
-  const [questionStatusFilter, setQuestionStatusFilter] = useState('approved');
+  const [showQuestionDetails, setShowQuestionDetails] = useState(false);
+  const [selectedQuestionForDetails, setSelectedQuestionForDetails] = useState<Question | null>(null);
 
-  useEffect(() => {
-    loadExamBooks();
-  }, []);
+  // Form data for create/edit
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    subject: '',
+    duration: 120,
+    instructions: '',
+    semester: '',
+    academicYear: '',
+  });
 
-  useEffect(() => {
-    if (shouldOpenCreateModal && !showCreateModal) {
-      setShowCreateModal(true);
-      if (onModalOpened) {
-        onModalOpened();
-      }
-    }
-  }, [shouldOpenCreateModal, showCreateModal, onModalOpened]);
-
-  const loadExamBooks = () => {
-    const result = ExamBookStorage.load();
-    if (result.success && result.data) {
-      setExamBooks(result.data);
-    }
-  };
-
-  const saveExamBooks = (books: ExamBook[]) => {
-    const result = ExamBookStorage.save(books);
-    if (result.success) {
-      setExamBooks(books);
-    }
-  };
-
-  // Filter questions for the create exam modal
-  const getFilteredQuestionsForExam = (): Question[] => {
-    return questions.filter(question => {
-      const matchesSearch = (question.subject || '').toLowerCase().includes(questionSearchTerm.toLowerCase()) ||
-                          (question.disease || '').toLowerCase().includes(questionSearchTerm.toLowerCase()) ||
-                          (question.topic || '').toLowerCase().includes(questionSearchTerm.toLowerCase()) ||
-                          (question.leadQuestion || '').toLowerCase().includes(questionSearchTerm.toLowerCase());
-      
-      const matchesSubject = questionSubjectFilter === 'all' || question.subject === questionSubjectFilter;
-      const matchesStatus = questionStatusFilter === 'all' || question.status === questionStatusFilter;
-
-      return matchesSearch && matchesSubject && matchesStatus;
-    });
-  };
-
-  const handleCreateExam = async () => {
-    if (!createExamData.title.trim() || !createExamData.subject.trim()) {
-      alert('Please fill in all required fields');
-      return;
-    }
-
-    if (createExamData.selectedQuestions.length === 0) {
-      alert('Please select at least one question for the exam');
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      const newExamBook: ExamBook = {
-        id: `exam_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        title: createExamData.title,
-        description: createExamData.description,
-        subject: createExamData.subject,
-        totalPoints: createExamData.selectedQuestions.length * 10, // 10 points per question
-        duration: createExamData.duration,
-        instructions: createExamData.instructions,
-        questions: createExamData.selectedQuestions,
-        createdBy: user?.id || '',
-        createdAt: new Date().toISOString().split('T')[0],
-        status: 'draft',
-        semester: createExamData.semester,
-        academicYear: createExamData.academicYear,
-      };
-
-      const updatedExamBooks = [newExamBook, ...examBooks];
-      saveExamBooks(updatedExamBooks);
-
-      // Reset form
-      setCreateExamData({
-        title: '',
-        description: '',
-        subject: '',
-        duration: 120,
-        instructions: '',
-        semester: '',
-        academicYear: '',
-        selectedQuestions: []
-      });
-
-      setShowCreateModal(false);
-      alert('Exam book created successfully!');
-    } catch (error) {
-      console.error('Error creating exam book:', error);
-      alert('Failed to create exam book. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleQuestionSelect = (questionId: string) => {
-    setCreateExamData(prev => ({
-      ...prev,
-      selectedQuestions: prev.selectedQuestions.includes(questionId)
-        ? prev.selectedQuestions.filter(id => id !== questionId)
-        : [...prev.selectedQuestions, questionId]
-    }));
-  };
-
-  const handleViewQuestionDetails = (question: Question) => {
-    setSelectedQuestion(question);
-    setShowQuestionDetails(true);
-  };
-
-  const handleViewExamBook = (examBook: ExamBook) => {
-    setSelectedExamBook(examBook);
-    setShowViewModal(true);
-  };
-
-  const handleEditExamBook = (examBook: ExamBook) => {
-    if (examBook.status !== 'draft') {
-      alert('Only draft exam books can be edited');
-      return;
-    }
-    
-    setSelectedExamBook(examBook);
-    setEditExamData({
-      title: examBook.title,
-      description: examBook.description,
-      subject: examBook.subject,
-      duration: examBook.duration,
-      instructions: examBook.instructions,
-      semester: examBook.semester,
-      academicYear: examBook.academicYear,
-      selectedQuestions: examBook.questions
-    });
-    setShowEditModal(true);
-  };
-
-  const handleDeleteExamBook = (examBook: ExamBook) => {
-    if (confirm(`Are you sure you want to delete "${examBook.title}"? This action cannot be undone.`)) {
-      const updatedExamBooks = examBooks.filter(e => e.id !== examBook.id);
-      saveExamBooks(updatedExamBooks);
-      alert('Exam book deleted successfully!');
-    }
-  };
-
-  const handleUpdateExamBook = async () => {
-    if (!selectedExamBook || !editExamData.title.trim() || !editExamData.subject.trim()) {
-      alert('Please fill in all required fields');
-      return;
-    }
-
-    if (editExamData.selectedQuestions.length === 0) {
-      alert('Please select at least one question for the exam');
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      const updatedExamBook: ExamBook = {
-        ...selectedExamBook,
-        title: editExamData.title,
-        description: editExamData.description,
-        subject: editExamData.subject,
-        totalPoints: editExamData.selectedQuestions.length * 10,
-        duration: editExamData.duration,
-        instructions: editExamData.instructions,
-        questions: editExamData.selectedQuestions,
-        semester: editExamData.semester,
-        academicYear: editExamData.academicYear,
-      };
-
-      const updatedExamBooks = examBooks.map(e => 
-        e.id === selectedExamBook.id ? updatedExamBook : e
-      );
-      saveExamBooks(updatedExamBooks);
-
-      setShowEditModal(false);
-      setSelectedExamBook(null);
-      setEditExamData({
-        title: '',
-        description: '',
-        subject: '',
-        duration: 120,
-        instructions: '',
-        semester: '',
-        academicYear: '',
-        selectedQuestions: []
-      });
-
-      alert('Exam book updated successfully!');
-    } catch (error) {
-      console.error('Error updating exam book:', error);
-      alert('Failed to update exam book. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleFinalizeExamBook = async () => {
-    if (!selectedExamBook) return;
-
-    if (confirm(`Are you sure you want to finalize "${selectedExamBook.title}"? Once finalized, it cannot be edited.`)) {
-      const updatedExamBook: ExamBook = {
-        ...selectedExamBook,
-        status: 'finalized'
-      };
-
-      const updatedExamBooks = examBooks.map(e => 
-        e.id === selectedExamBook.id ? updatedExamBook : e
-      );
-      saveExamBooks(updatedExamBooks);
-
-      setShowEditModal(false);
-      setSelectedExamBook(null);
-      alert('Exam book finalized successfully!');
-    }
-  };
-
-  const handleEditQuestionSelect = (questionId: string) => {
-    setEditExamData(prev => ({
-      ...prev,
-      selectedQuestions: prev.selectedQuestions.includes(questionId)
-        ? prev.selectedQuestions.filter(id => id !== questionId)
-        : [...prev.selectedQuestions, questionId]
-    }));
-  };
-
-  const subjects = [...new Set(questions.map(q => q.subject))];
-  const filteredQuestionsForExam = getFilteredQuestionsForExam();
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   if (!user || !hasRole('coordinator')) {
     return (
@@ -322,22 +77,449 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
     );
   }
 
+  // Load exam books on component mount
+  useEffect(() => {
+    loadExamBooks();
+  }, []);
+
+  // Handle external modal trigger
+  useEffect(() => {
+    if (shouldOpenCreateModal) {
+      setShowCreateModal(true);
+      if (onModalOpened) {
+        onModalOpened();
+      }
+    }
+  }, [shouldOpenCreateModal, onModalOpened]);
+
+  const loadExamBooks = () => {
+    const result = ExamBookStorage.load();
+    if (result.success && result.data) {
+      setExamBooks(result.data);
+      console.log(`Loaded ${result.data.length} exam books`);
+    } else {
+      console.error('Failed to load exam books:', result.error);
+      setExamBooks([]);
+    }
+  };
+
+  const saveExamBooks = (updatedExamBooks: ExamBook[]) => {
+    const result = ExamBookStorage.save(updatedExamBooks);
+    if (result.success) {
+      setExamBooks(updatedExamBooks);
+      return true;
+    } else {
+      console.error('Failed to save exam books:', result.error);
+      return false;
+    }
+  };
+
+  // Get filtered questions for selection
+  const getFilteredQuestions = (): Question[] => {
+    return questions.filter(question => {
+      if (question.status !== 'approved') return false;
+      
+      const matchesSearch = question.subject.toLowerCase().includes(questionSearchTerm.toLowerCase()) ||
+                          question.topic.toLowerCase().includes(questionSearchTerm.toLowerCase()) ||
+                          question.leadQuestion.toLowerCase().includes(questionSearchTerm.toLowerCase());
+      
+      const matchesSubject = questionSubjectFilter === 'all' || question.subject === questionSubjectFilter;
+
+      return matchesSearch && matchesSubject;
+    });
+  };
+
+  const subjects = [...new Set(questions.map(q => q.subject))];
+  const filteredQuestions = getFilteredQuestions();
+
+  // Form validation
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.title.trim()) {
+      newErrors.title = 'Title is required';
+    }
+
+    if (!formData.description.trim()) {
+      newErrors.description = 'Description is required';
+    }
+
+    if (!formData.subject.trim()) {
+      newErrors.subject = 'Subject is required';
+    }
+
+    if (!formData.semester.trim()) {
+      newErrors.semester = 'Semester is required';
+    }
+
+    if (!formData.academicYear.trim()) {
+      newErrors.academicYear = 'Academic year is required';
+    }
+
+    if (formData.duration < 30) {
+      newErrors.duration = 'Duration must be at least 30 minutes';
+    }
+
+    if (selectedQuestions.length === 0) {
+      newErrors.questions = 'At least one question must be selected';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Reset form
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      description: '',
+      subject: '',
+      duration: 120,
+      instructions: '',
+      semester: '',
+      academicYear: '',
+    });
+    setSelectedQuestions([]);
+    setQuestionSearchTerm('');
+    setQuestionSubjectFilter('all');
+    setErrors({});
+  };
+
+  // Handle form input changes
+  const handleInputChange = (field: string, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  };
+
+  // Handle question selection
+  const handleQuestionSelect = (questionId: string, selected: boolean) => {
+    if (selected) {
+      setSelectedQuestions(prev => [...prev, questionId]);
+    } else {
+      setSelectedQuestions(prev => prev.filter(id => id !== questionId));
+    }
+  };
+
+  // Calculate total points (assuming 1 point per question for now)
+  const calculateTotalPoints = () => {
+    return selectedQuestions.length;
+  };
+
+  // View exam book
+  const handleViewExamBook = (examBook: ExamBook) => {
+    console.log('Viewing exam book:', examBook.id);
+    setSelectedExamBook(examBook);
+    setShowViewModal(true);
+  };
+
+  // Edit exam book
+  const handleEditExamBook = (examBook: ExamBook) => {
+    console.log('Editing exam book:', examBook.id);
+    if (examBook.status !== 'draft') {
+      setSubmitStatus('error');
+      setSubmitMessage('Only draft exam books can be edited');
+      setTimeout(() => {
+        setSubmitStatus('idle');
+        setSubmitMessage('');
+      }, 3000);
+      return;
+    }
+
+    // Populate form with existing data
+    setFormData({
+      title: examBook.title,
+      description: examBook.description,
+      subject: examBook.subject,
+      duration: examBook.duration,
+      instructions: examBook.instructions,
+      semester: examBook.semester,
+      academicYear: examBook.academicYear,
+    });
+    setSelectedQuestions(examBook.questions);
+    setSelectedExamBook(examBook);
+    setShowEditModal(true);
+  };
+
+  // Delete exam book
+  const handleDeleteExamBook = (examBookId: string) => {
+    console.log('Initiating delete for exam book:', examBookId);
+    setExamBookToDelete(examBookId);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteExamBook = () => {
+    if (!examBookToDelete) return;
+
+    console.log('Confirming delete for exam book:', examBookToDelete);
+    const updatedExamBooks = examBooks.filter(book => book.id !== examBookToDelete);
+    
+    if (saveExamBooks(updatedExamBooks)) {
+      setSubmitStatus('success');
+      setSubmitMessage('Exam book deleted successfully!');
+      console.log('Exam book deleted successfully');
+    } else {
+      setSubmitStatus('error');
+      setSubmitMessage('Failed to delete exam book. Please try again.');
+    }
+
+    setShowDeleteConfirm(false);
+    setExamBookToDelete(null);
+    
+    setTimeout(() => {
+      setSubmitStatus('idle');
+      setSubmitMessage('');
+    }, 3000);
+  };
+
+  // Finalize exam book
+  const handleFinalizeExamBook = (examBookId: string) => {
+    console.log('Initiating finalize for exam book:', examBookId);
+    setExamBookToFinalize(examBookId);
+    setShowFinalizeConfirm(true);
+  };
+
+  const confirmFinalizeExamBook = () => {
+    if (!examBookToFinalize) return;
+
+    console.log('Confirming finalize for exam book:', examBookToFinalize);
+    const updatedExamBooks = examBooks.map(book => 
+      book.id === examBookToFinalize 
+        ? { ...book, status: 'finalized' as const }
+        : book
+    );
+    
+    if (saveExamBooks(updatedExamBooks)) {
+      setSubmitStatus('success');
+      setSubmitMessage('Exam book finalized successfully!');
+      console.log('Exam book finalized successfully');
+    } else {
+      setSubmitStatus('error');
+      setSubmitMessage('Failed to finalize exam book. Please try again.');
+    }
+
+    setShowFinalizeConfirm(false);
+    setExamBookToFinalize(null);
+    
+    setTimeout(() => {
+      setSubmitStatus('idle');
+      setSubmitMessage('');
+    }, 3000);
+  };
+
+  // Create exam book
+  const handleCreateExamBook = async () => {
+    if (!validateForm()) return;
+
+    setIsSubmitting(true);
+    console.log('Creating new exam book with data:', formData, 'Selected questions:', selectedQuestions);
+
+    try {
+      const newExamBook: ExamBook = {
+        id: `exam_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        title: formData.title,
+        description: formData.description,
+        subject: formData.subject,
+        totalPoints: calculateTotalPoints(),
+        duration: formData.duration,
+        instructions: formData.instructions,
+        questions: selectedQuestions,
+        createdBy: user.id,
+        createdAt: new Date().toISOString().split('T')[0],
+        status: 'draft',
+        semester: formData.semester,
+        academicYear: formData.academicYear,
+      };
+
+      const updatedExamBooks = [newExamBook, ...examBooks];
+      
+      if (saveExamBooks(updatedExamBooks)) {
+        setSubmitStatus('success');
+        setSubmitMessage('Exam book created successfully!');
+        setShowCreateModal(false);
+        resetForm();
+        console.log('Exam book created successfully:', newExamBook.id);
+      } else {
+        throw new Error('Failed to save exam book');
+      }
+    } catch (error) {
+      console.error('Error creating exam book:', error);
+      setSubmitStatus('error');
+      setSubmitMessage('Failed to create exam book. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+      setTimeout(() => {
+        setSubmitStatus('idle');
+        setSubmitMessage('');
+      }, 3000);
+    }
+  };
+
+  // Update exam book
+  const handleUpdateExamBook = async () => {
+    if (!validateForm() || !selectedExamBook) return;
+
+    setIsSubmitting(true);
+    console.log('Updating exam book:', selectedExamBook.id, 'with data:', formData);
+
+    try {
+      const updatedExamBook: ExamBook = {
+        ...selectedExamBook,
+        title: formData.title,
+        description: formData.description,
+        subject: formData.subject,
+        totalPoints: calculateTotalPoints(),
+        duration: formData.duration,
+        instructions: formData.instructions,
+        questions: selectedQuestions,
+        semester: formData.semester,
+        academicYear: formData.academicYear,
+      };
+
+      const updatedExamBooks = examBooks.map(book => 
+        book.id === selectedExamBook.id ? updatedExamBook : book
+      );
+      
+      if (saveExamBooks(updatedExamBooks)) {
+        setSubmitStatus('success');
+        setSubmitMessage('Exam book updated successfully!');
+        setShowEditModal(false);
+        setSelectedExamBook(null);
+        resetForm();
+        console.log('Exam book updated successfully:', updatedExamBook.id);
+      } else {
+        throw new Error('Failed to save exam book');
+      }
+    } catch (error) {
+      console.error('Error updating exam book:', error);
+      setSubmitStatus('error');
+      setSubmitMessage('Failed to update exam book. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+      setTimeout(() => {
+        setSubmitStatus('idle');
+        setSubmitMessage('');
+      }, 3000);
+    }
+  };
+
+  // View question details
+  const handleViewQuestionDetails = (questionId: string) => {
+    const question = questions.find(q => q.id === questionId);
+    if (question) {
+      setSelectedQuestionForDetails(question);
+      setShowQuestionDetails(true);
+    }
+  };
+
+  // Get question by ID
+  const getQuestionById = (questionId: string): Question | undefined => {
+    return questions.find(q => q.id === questionId);
+  };
+
+  // Test functionality
+  const runTests = () => {
+    console.log('🧪 Running ExamBooks functionality tests...');
+    
+    // Test 1: Load exam books
+    console.log('Test 1: Loading exam books...');
+    loadExamBooks();
+    console.log('✅ Load exam books test completed');
+    
+    // Test 2: Create a test exam book
+    console.log('Test 2: Creating test exam book...');
+    const testExamBook: ExamBook = {
+      id: 'test_exam_' + Date.now(),
+      title: 'Test Exam Book',
+      description: 'Test Description',
+      subject: 'Test Subject',
+      totalPoints: 10,
+      duration: 120,
+      instructions: 'Test instructions',
+      questions: ['1', '2'],
+      createdBy: user.id,
+      createdAt: new Date().toISOString().split('T')[0],
+      status: 'draft',
+      semester: 'Test Semester',
+      academicYear: 'Test Year',
+    };
+    
+    const testExamBooks = [testExamBook, ...examBooks];
+    if (saveExamBooks(testExamBooks)) {
+      console.log('✅ Create exam book test passed');
+    } else {
+      console.log('❌ Create exam book test failed');
+    }
+    
+    // Test 3: View functionality
+    console.log('Test 3: Testing view functionality...');
+    handleViewExamBook(testExamBook);
+    console.log('✅ View functionality test completed');
+    
+    // Test 4: Edit functionality
+    console.log('Test 4: Testing edit functionality...');
+    handleEditExamBook(testExamBook);
+    console.log('✅ Edit functionality test completed');
+    
+    // Test 5: Delete functionality
+    console.log('Test 5: Testing delete functionality...');
+    const updatedAfterDelete = examBooks.filter(book => book.id !== testExamBook.id);
+    if (saveExamBooks(updatedAfterDelete)) {
+      console.log('✅ Delete functionality test passed');
+    } else {
+      console.log('❌ Delete functionality test failed');
+    }
+    
+    console.log('🎉 All tests completed! Check console for results.');
+  };
+
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Exam Books</h2>
-          <p className="text-gray-600">Create and manage examination books</p>
+          <p className="text-gray-600">Create and manage examination question books</p>
         </div>
         
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
-        >
-          <Plus size={20} />
-          <span>Create Exam Book</span>
-        </button>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={runTests}
+            className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2"
+          >
+            <Settings size={20} />
+            <span>Run Tests</span>
+          </button>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+          >
+            <Plus size={20} />
+            <span>Create Exam Book</span>
+          </button>
+        </div>
       </div>
+
+      {/* Status Messages */}
+      {submitStatus !== 'idle' && (
+        <div className={`rounded-lg p-4 flex items-center space-x-3 ${
+          submitStatus === 'success' 
+            ? 'bg-green-50 border border-green-200' 
+            : 'bg-red-50 border border-red-200'
+        }`}>
+          {submitStatus === 'success' ? (
+            <CheckCircle size={20} className="text-green-600" />
+          ) : (
+            <AlertTriangle size={20} className="text-red-600" />
+          )}
+          <p className={`font-medium ${
+            submitStatus === 'success' ? 'text-green-800' : 'text-red-800'
+          }`}>
+            {submitMessage}
+          </p>
+        </div>
+      )}
 
       {/* Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -355,13 +537,13 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
 
         <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
           <div className="flex items-center space-x-3">
-            <div className="bg-orange-100 p-2 rounded-full">
-              <Clock size={20} className="text-orange-600" />
+            <div className="bg-yellow-100 p-2 rounded-full">
+              <Edit size={20} className="text-yellow-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-600">Draft Exams</p>
+              <p className="text-sm text-gray-600">Draft</p>
               <p className="text-xl font-semibold text-gray-900">
-                {examBooks.filter(e => e.status === 'draft').length}
+                {examBooks.filter(book => book.status === 'draft').length}
               </p>
             </div>
           </div>
@@ -373,9 +555,9 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
               <CheckCircle size={20} className="text-green-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-600">Finalized Exams</p>
+              <p className="text-sm text-gray-600">Finalized</p>
               <p className="text-xl font-semibold text-gray-900">
-                {examBooks.filter(e => e.status === 'finalized').length}
+                {examBooks.filter(book => book.status === 'finalized').length}
               </p>
             </div>
           </div>
@@ -387,9 +569,9 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
               <Users size={20} className="text-purple-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-600">Available Questions</p>
+              <p className="text-sm text-gray-600">Published</p>
               <p className="text-xl font-semibold text-gray-900">
-                {questions.filter(q => q.status === 'approved').length}
+                {examBooks.filter(book => book.status === 'published').length}
               </p>
             </div>
           </div>
@@ -397,98 +579,149 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
       </div>
 
       {/* Exam Books List */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-6 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900">Your Exam Books</h3>
         </div>
         
-        <div className="p-6">
-          {examBooks.length === 0 ? (
-            <div className="text-center py-12">
-              <BookOpen size={48} className="mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No exam books yet</h3>
-              <p className="text-gray-600 mb-4">Create your first exam book to get started.</p>
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Create Exam Book
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {examBooks.map(examBook => (
-                <div key={examBook.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <h4 className="text-lg font-semibold text-gray-900 mb-2">{examBook.title}</h4>
-                      <p className="text-gray-600 text-sm mb-3">{examBook.description}</p>
-                      
-                      <div className="flex items-center space-x-4 text-sm text-gray-600">
-                        <span className="flex items-center space-x-1">
-                          <Building size={14} />
-                          <span>{examBook.subject}</span>
-                        </span>
-                        <span className="flex items-center space-x-1">
-                          <Clock size={14} />
-                          <span>{examBook.duration} min</span>
-                        </span>
-                        <span className="flex items-center space-x-1">
-                          <FileText size={14} />
-                          <span>{examBook.questions.length} questions</span>
-                        </span>
-                      </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Exam Book
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Subject
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Questions
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Duration
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Created
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {examBooks.map((examBook) => (
+                <tr key={examBook.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{examBook.title}</p>
+                      <p className="text-xs text-gray-500 truncate max-w-xs">{examBook.description}</p>
                     </div>
-                    
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="text-sm text-gray-900">{examBook.subject}</span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center space-x-2">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        examBook.status === 'draft' 
-                          ? 'bg-orange-100 text-orange-800'
-                          : examBook.status === 'finalized'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-blue-100 text-blue-800'
-                      }`}>
-                        {examBook.status}
+                      <FileText size={16} className="text-gray-400" />
+                      <span className="text-sm text-gray-900">{examBook.questions.length}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center space-x-2">
+                      <Clock size={16} className="text-gray-400" />
+                      <span className="text-sm text-gray-900">{examBook.duration} min</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      examBook.status === 'draft' 
+                        ? 'bg-yellow-100 text-yellow-800' 
+                        : examBook.status === 'finalized'
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-blue-100 text-blue-800'
+                    }`}>
+                      {examBook.status.charAt(0).toUpperCase() + examBook.status.slice(1)}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center space-x-2">
+                      <Calendar size={16} className="text-gray-400" />
+                      <span className="text-sm text-gray-500">
+                        {new Date(examBook.createdAt).toLocaleDateString()}
                       </span>
                     </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                    <div className="text-xs text-gray-500">
-                      Created {new Date(examBook.createdAt).toLocaleDateString()}
-                    </div>
-                    
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center space-x-2">
-                      <button className="text-blue-600 hover:text-blue-700 text-sm flex items-center space-x-1">
+                      <button
+                        onClick={() => handleViewExamBook(examBook)}
+                        className="text-blue-600 hover:text-blue-700 text-sm flex items-center space-x-1"
+                        title="View exam book details"
+                      >
                         <Eye size={14} />
                         <span>View</span>
                       </button>
-                      <button className="text-gray-600 hover:text-gray-700 text-sm flex items-center space-x-1">
+                      
+                      <button
+                        onClick={() => handleEditExamBook(examBook)}
+                        disabled={examBook.status !== 'draft'}
+                        className={`text-sm flex items-center space-x-1 ${
+                          examBook.status === 'draft'
+                            ? 'text-green-600 hover:text-green-700'
+                            : 'text-gray-400 cursor-not-allowed'
+                        }`}
+                        title={examBook.status === 'draft' ? 'Edit exam book' : 'Only draft exam books can be edited'}
+                      >
                         <Edit size={14} />
                         <span>Edit</span>
                       </button>
-                      <button className="text-red-600 hover:text-red-700 text-sm flex items-center space-x-1">
+                      
+                      <button
+                        onClick={() => handleDeleteExamBook(examBook.id)}
+                        className="text-red-600 hover:text-red-700 text-sm flex items-center space-x-1"
+                        title="Delete exam book"
+                      >
                         <Trash2 size={14} />
                         <span>Delete</span>
                       </button>
                     </div>
-                  </div>
-                </div>
+                  </td>
+                </tr>
               ))}
-            </div>
-          )}
+            </tbody>
+          </table>
         </div>
+
+        {examBooks.length === 0 && (
+          <div className="text-center py-12">
+            <BookOpen size={48} className="mx-auto text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No exam books yet</h3>
+            <p className="text-gray-600 mb-4">Create your first exam book to get started.</p>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Create Exam Book
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Create Exam Book Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-6xl w-full max-h-[95vh] overflow-y-auto">
+          <div className="bg-white rounded-lg max-w-7xl w-full max-h-[95vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-gray-900">Create New Exam Book</h2>
                 <button
-                  onClick={() => setShowCreateModal(false)}
+                  onClick={() => {
+                    setShowCreateModal(false);
+                    resetForm();
+                  }}
                   className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
                   <X size={24} />
@@ -504,28 +737,38 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
                     <div className="space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Exam Title *
+                          Title *
                         </label>
                         <input
                           type="text"
-                          value={createExamData.title}
-                          onChange={(e) => setCreateExamData(prev => ({ ...prev, title: e.target.value }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          placeholder="Enter exam title"
+                          value={formData.title}
+                          onChange={(e) => handleInputChange('title', e.target.value)}
+                          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                            errors.title ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                          }`}
+                          placeholder="Enter exam book title"
                         />
+                        {errors.title && (
+                          <p className="mt-1 text-sm text-red-600">{errors.title}</p>
+                        )}
                       </div>
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Description
+                          Description *
                         </label>
                         <textarea
                           rows={3}
-                          value={createExamData.description}
-                          onChange={(e) => setCreateExamData(prev => ({ ...prev, description: e.target.value }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          placeholder="Enter exam description"
+                          value={formData.description}
+                          onChange={(e) => handleInputChange('description', e.target.value)}
+                          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                            errors.description ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                          }`}
+                          placeholder="Enter exam book description"
                         />
+                        {errors.description && (
+                          <p className="mt-1 text-sm text-red-600">{errors.description}</p>
+                        )}
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
@@ -533,58 +776,75 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Subject *
                           </label>
-                          <select
-                            value={createExamData.subject}
-                            onChange={(e) => setCreateExamData(prev => ({ ...prev, subject: e.target.value }))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          >
-                            <option value="">Select subject</option>
-                            {subjects.map(subject => (
-                              <option key={subject} value={subject}>{subject}</option>
-                            ))}
-                          </select>
+                          <input
+                            type="text"
+                            value={formData.subject}
+                            onChange={(e) => handleInputChange('subject', e.target.value)}
+                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                              errors.subject ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                            }`}
+                            placeholder="e.g., Mathematics"
+                          />
+                          {errors.subject && (
+                            <p className="mt-1 text-sm text-red-600">{errors.subject}</p>
+                          )}
                         </div>
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Duration (minutes)
+                            Duration (minutes) *
                           </label>
                           <input
                             type="number"
-                            value={createExamData.duration}
-                            onChange={(e) => setCreateExamData(prev => ({ ...prev, duration: parseInt(e.target.value) || 120 }))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            value={formData.duration}
+                            onChange={(e) => handleInputChange('duration', parseInt(e.target.value) || 0)}
+                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                              errors.duration ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                            }`}
                             min="30"
-                            max="300"
+                            placeholder="120"
                           />
+                          {errors.duration && (
+                            <p className="mt-1 text-sm text-red-600">{errors.duration}</p>
+                          )}
                         </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Semester
+                            Semester *
                           </label>
                           <input
                             type="text"
-                            value={createExamData.semester}
-                            onChange={(e) => setCreateExamData(prev => ({ ...prev, semester: e.target.value }))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            value={formData.semester}
+                            onChange={(e) => handleInputChange('semester', e.target.value)}
+                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                              errors.semester ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                            }`}
                             placeholder="e.g., Spring 2024"
                           />
+                          {errors.semester && (
+                            <p className="mt-1 text-sm text-red-600">{errors.semester}</p>
+                          )}
                         </div>
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Academic Year
+                            Academic Year *
                           </label>
                           <input
                             type="text"
-                            value={createExamData.academicYear}
-                            onChange={(e) => setCreateExamData(prev => ({ ...prev, academicYear: e.target.value }))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            value={formData.academicYear}
+                            onChange={(e) => handleInputChange('academicYear', e.target.value)}
+                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                              errors.academicYear ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                            }`}
                             placeholder="e.g., 2023-2024"
                           />
+                          {errors.academicYear && (
+                            <p className="mt-1 text-sm text-red-600">{errors.academicYear}</p>
+                          )}
                         </div>
                       </div>
 
@@ -594,10 +854,10 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
                         </label>
                         <textarea
                           rows={4}
-                          value={createExamData.instructions}
-                          onChange={(e) => setCreateExamData(prev => ({ ...prev, instructions: e.target.value }))}
+                          value={formData.instructions}
+                          onChange={(e) => handleInputChange('instructions', e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          placeholder="Enter exam instructions for students"
+                          placeholder="Enter exam instructions for students..."
                         />
                       </div>
                     </div>
@@ -606,31 +866,43 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
                   {/* Selected Questions Summary */}
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                      Selected Questions ({createExamData.selectedQuestions.length})
+                      Selected Questions ({selectedQuestions.length})
                     </h3>
-                    
-                    {createExamData.selectedQuestions.length === 0 ? (
-                      <p className="text-gray-500 text-sm">No questions selected yet</p>
-                    ) : (
-                      <div className="space-y-2 max-h-40 overflow-y-auto">
-                        {createExamData.selectedQuestions.map(questionId => {
-                          const question = questions.find(q => q.id === questionId);
-                          return question ? (
-                            <div key={questionId} className="flex items-center justify-between p-2 bg-blue-50 rounded border">
-                              <span className="text-sm text-gray-700 truncate">
-                                {question.subject} - {question.topic}
-                              </span>
-                              <button
-                                onClick={() => handleQuestionSelect(questionId)}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <X size={16} />
-                              </button>
-                            </div>
-                          ) : null;
-                        })}
-                      </div>
+                    {errors.questions && (
+                      <p className="mb-2 text-sm text-red-600">{errors.questions}</p>
                     )}
+                    <div className="bg-gray-50 rounded-lg p-4 max-h-64 overflow-y-auto">
+                      {selectedQuestions.length === 0 ? (
+                        <p className="text-gray-500 text-sm">No questions selected yet</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {selectedQuestions.map(questionId => {
+                            const question = getQuestionById(questionId);
+                            return question ? (
+                              <div key={questionId} className="flex items-center justify-between bg-white p-3 rounded border">
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-gray-900 truncate">
+                                    {question.leadQuestion}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    {question.subject} • {question.topic}
+                                  </p>
+                                </div>
+                                <button
+                                  onClick={() => handleQuestionSelect(questionId, false)}
+                                  className="text-red-600 hover:text-red-700 ml-2"
+                                >
+                                  <X size={16} />
+                                </button>
+                              </div>
+                            ) : null;
+                          })}
+                        </div>
+                      )}
+                    </div>
+                    <div className="mt-2 text-sm text-gray-600">
+                      Total Points: {calculateTotalPoints()}
+                    </div>
                   </div>
                 </div>
 
@@ -640,7 +912,7 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Questions</h3>
                     
                     {/* Question Filters */}
-                    <div className="space-y-4 mb-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                       <div className="relative">
                         <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                         <input
@@ -652,98 +924,82 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
                         />
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <select
-                          value={questionSubjectFilter}
-                          onChange={(e) => setQuestionSubjectFilter(e.target.value)}
-                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        >
-                          <option value="all">All Subjects</option>
-                          {subjects.map(subject => (
-                            <option key={subject} value={subject}>{subject}</option>
-                          ))}
-                        </select>
-
-                        <select
-                          value={questionStatusFilter}
-                          onChange={(e) => setQuestionStatusFilter(e.target.value)}
-                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        >
-                          <option value="approved">Approved Only</option>
-                          <option value="all">All Statuses</option>
-                        </select>
-                      </div>
+                      <select
+                        value={questionSubjectFilter}
+                        onChange={(e) => setQuestionSubjectFilter(e.target.value)}
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="all">All Subjects</option>
+                        {subjects.map(subject => (
+                          <option key={subject} value={subject}>{subject}</option>
+                        ))}
+                      </select>
                     </div>
 
                     {/* Questions List */}
-                    <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
-                      {filteredQuestionsForExam.length === 0 ? (
-                        <div className="p-4 text-center text-gray-500">
-                          No questions found matching your criteria
-                        </div>
-                      ) : (
-                        <div className="divide-y divide-gray-200">
-                          {filteredQuestionsForExam.map(question => (
-                            <div key={question.id} className="p-4 hover:bg-gray-50">
-                              <div className="flex items-start space-x-3">
-                                <input
-                                  type="checkbox"
-                                  checked={createExamData.selectedQuestions.includes(question.id)}
-                                  onChange={() => handleQuestionSelect(question.id)}
-                                  className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                />
-                                
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-start justify-between">
-                                    <div className="flex-1">
-                                      <h4 className="text-sm font-medium text-gray-900 mb-1">
-                                        {question.subject} - {question.topic}
-                                      </h4>
-                                      <p className="text-xs text-gray-600 mb-2 line-clamp-2">
-                                        {question.leadQuestion}
-                                      </p>
-                                      <div className="flex items-center space-x-2 text-xs text-gray-500">
-                                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                                          {question.status}
-                                        </span>
-                                        <span>By {question.authorName}</span>
-                                      </div>
-                                    </div>
-                                    
-                                    <button
-                                      onClick={() => handleViewQuestionDetails(question)}
-                                      className="ml-2 text-blue-600 hover:text-blue-700 flex items-center space-x-1"
-                                    >
-                                      <Eye size={14} />
-                                      <span className="text-xs">View</span>
-                                    </button>
-                                  </div>
-                                </div>
+                    <div className="border border-gray-200 rounded-lg max-h-96 overflow-y-auto">
+                      {filteredQuestions.map(question => (
+                        <div key={question.id} className="p-4 border-b border-gray-100 last:border-b-0">
+                          <div className="flex items-start space-x-3">
+                            <input
+                              type="checkbox"
+                              checked={selectedQuestions.includes(question.id)}
+                              onChange={(e) => handleQuestionSelect(question.id, e.target.checked)}
+                              className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between">
+                                <p className="text-sm font-medium text-gray-900 truncate">
+                                  {question.leadQuestion}
+                                </p>
+                                <button
+                                  onClick={() => handleViewQuestionDetails(question.id)}
+                                  className="text-blue-600 hover:text-blue-700 text-sm flex items-center space-x-1 ml-2"
+                                >
+                                  <Eye size={14} />
+                                  <span>View</span>
+                                </button>
                               </div>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {question.subject} • {question.topic} • {question.status}
+                              </p>
+                              <p className="text-xs text-gray-600 mt-1">
+                                By {question.authorName}
+                              </p>
                             </div>
-                          ))}
+                          </div>
                         </div>
-                      )}
+                      ))}
                     </div>
+
+                    {filteredQuestions.length === 0 && (
+                      <div className="text-center py-8 text-gray-500">
+                        <Filter size={48} className="mx-auto mb-4 text-gray-400" />
+                        <p>No approved questions found</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
 
               {/* Modal Actions */}
-              <div className="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200 mt-8">
+              <div className="mt-8 pt-6 border-t border-gray-200 flex justify-end space-x-3">
                 <button
-                  onClick={() => setShowCreateModal(false)}
+                  onClick={() => {
+                    setShowCreateModal(false);
+                    resetForm();
+                  }}
                   className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={handleCreateExam}
-                  disabled={isLoading}
+                  onClick={handleCreateExamBook}
+                  disabled={isSubmitting}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center space-x-2"
                 >
                   <Save size={16} />
-                  <span>{isLoading ? 'Creating...' : 'Create Exam Book'}</span>
+                  <span>{isSubmitting ? 'Creating...' : 'Create Exam Book'}</span>
                 </button>
               </div>
             </div>
@@ -754,144 +1010,157 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
       {/* View Exam Book Modal */}
       {showViewModal && selectedExamBook && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[95vh] overflow-y-auto">
             <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-900">Exam Book Details</h2>
+              <div className="flex items-start justify-between mb-6">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 mb-2">
+                    {selectedExamBook.title}
+                  </h2>
+                  <p className="text-gray-600">{selectedExamBook.description}</p>
+                </div>
                 <button
                   onClick={() => {
                     setShowViewModal(false);
                     setSelectedExamBook(null);
                   }}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  className="text-gray-400 hover:text-gray-600"
                 >
                   <X size={24} />
                 </button>
               </div>
 
-              <div className="space-y-6">
-                {/* Exam Book Information */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div className="space-y-4">
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
-                    <div className="space-y-3">
-                      <div>
-                        <span className="text-sm font-medium text-gray-600">Title:</span>
-                        <p className="text-gray-900">{selectedExamBook.title}</p>
+                    <h4 className="font-medium text-gray-900 mb-2">Basic Information</h4>
+                    <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Subject:</span>
+                        <span className="font-medium">{selectedExamBook.subject}</span>
                       </div>
-                      <div>
-                        <span className="text-sm font-medium text-gray-600">Description:</span>
-                        <p className="text-gray-700">{selectedExamBook.description || 'No description provided'}</p>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Duration:</span>
+                        <span className="font-medium">{selectedExamBook.duration} minutes</span>
                       </div>
-                      <div>
-                        <span className="text-sm font-medium text-gray-600">Subject:</span>
-                        <p className="text-gray-900">{selectedExamBook.subject}</p>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Total Points:</span>
+                        <span className="font-medium">{selectedExamBook.totalPoints}</span>
                       </div>
-                      <div>
-                        <span className="text-sm font-medium text-gray-600">Status:</span>
-                        <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
-                          selectedExamBook.status === 'draft' 
-                            ? 'bg-orange-100 text-orange-800'
-                            : selectedExamBook.status === 'finalized'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {selectedExamBook.status}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Exam Details</h3>
-                    <div className="space-y-3">
-                      <div>
-                        <span className="text-sm font-medium text-gray-600">Duration:</span>
-                        <p className="text-gray-900">{selectedExamBook.duration} minutes</p>
-                      </div>
-                      <div>
-                        <span className="text-sm font-medium text-gray-600">Total Points:</span>
-                        <p className="text-gray-900">{selectedExamBook.totalPoints}</p>
-                      </div>
-                      <div>
-                        <span className="text-sm font-medium text-gray-600">Number of Questions:</span>
-                        <p className="text-gray-900">{selectedExamBook.questions.length}</p>
-                      </div>
-                      <div>
-                        <span className="text-sm font-medium text-gray-600">Semester:</span>
-                        <p className="text-gray-900">{selectedExamBook.semester || 'Not specified'}</p>
-                      </div>
-                      <div>
-                        <span className="text-sm font-medium text-gray-600">Academic Year:</span>
-                        <p className="text-gray-900">{selectedExamBook.academicYear || 'Not specified'}</p>
-                      </div>
-                      <div>
-                        <span className="text-sm font-medium text-gray-600">Created:</span>
-                        <p className="text-gray-900">{new Date(selectedExamBook.createdAt).toLocaleDateString()}</p>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Questions:</span>
+                        <span className="font-medium">{selectedExamBook.questions.length}</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Instructions */}
-                {selectedExamBook.instructions && (
+                <div className="space-y-4">
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Instructions</h3>
-                    <p className="text-gray-700 bg-gray-50 p-3 rounded-lg whitespace-pre-wrap">
-                      {selectedExamBook.instructions}
-                    </p>
+                    <h4 className="font-medium text-gray-900 mb-2">Exam Details</h4>
+                    <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Semester:</span>
+                        <span className="font-medium">{selectedExamBook.semester}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Academic Year:</span>
+                        <span className="font-medium">{selectedExamBook.academicYear}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Status:</span>
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          selectedExamBook.status === 'draft' 
+                            ? 'bg-yellow-100 text-yellow-800' 
+                            : selectedExamBook.status === 'finalized'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {selectedExamBook.status.charAt(0).toUpperCase() + selectedExamBook.status.slice(1)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Created:</span>
+                        <span className="font-medium">{new Date(selectedExamBook.createdAt).toLocaleDateString()}</span>
+                      </div>
+                    </div>
                   </div>
-                )}
+                </div>
+              </div>
 
-                {/* Questions List */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    Questions ({selectedExamBook.questions.length})
-                  </h3>
-                  <div className="space-y-3 max-h-60 overflow-y-auto">
-                    {selectedExamBook.questions.map((questionId, index) => {
-                      const question = questions.find(q => q.id === questionId);
-                      return question ? (
-                        <div key={questionId} className="flex items-center justify-between p-3 bg-gray-50 rounded border">
+              {selectedExamBook.instructions && (
+                <div className="mb-6">
+                  <h4 className="font-medium text-gray-900 mb-2">Instructions</h4>
+                  <div className="bg-blue-50 rounded-lg p-4">
+                    <p className="text-gray-700">{selectedExamBook.instructions}</p>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <h4 className="font-medium text-gray-900 mb-4">Questions ({selectedExamBook.questions.length})</h4>
+                <div className="space-y-3 max-h-64 overflow-y-auto">
+                  {selectedExamBook.questions.map((questionId, index) => {
+                    const question = getQuestionById(questionId);
+                    return question ? (
+                      <div key={questionId} className="bg-gray-50 rounded-lg p-4">
+                        <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <span className="text-sm font-medium text-gray-900">
-                              {index + 1}. {question.subject} - {question.topic}
-                            </span>
-                            <p className="text-xs text-gray-600 mt-1 truncate">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
+                                Q{index + 1}
+                              </span>
+                              <span className="text-xs text-gray-500">{question.subject} • {question.topic}</span>
+                            </div>
+                            <p className="text-sm font-medium text-gray-900 mb-1">
                               {question.leadQuestion}
+                            </p>
+                            <p className="text-xs text-gray-600">
+                              By {question.authorName}
                             </p>
                           </div>
                           <button
-                            onClick={() => handleViewQuestionDetails(question)}
-                            className="text-blue-600 hover:text-blue-700 text-sm flex items-center space-x-1"
+                            onClick={() => handleViewQuestionDetails(questionId)}
+                            className="text-blue-600 hover:text-blue-700 text-sm flex items-center space-x-1 ml-4"
                           >
                             <Eye size={14} />
                             <span>View</span>
                           </button>
                         </div>
-                      ) : (
-                        <div key={questionId} className="p-3 bg-red-50 rounded border border-red-200">
-                          <span className="text-sm text-red-600">Question not found (ID: {questionId})</span>
-                        </div>
-                      );
-                    })}
-                  </div>
+                      </div>
+                    ) : (
+                      <div key={questionId} className="bg-red-50 rounded-lg p-4">
+                        <p className="text-red-600 text-sm">Question not found (ID: {questionId})</p>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
-              <div className="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200 mt-8">
-                {selectedExamBook.status === 'draft' && (
-                  <button
-                    onClick={() => {
-                      setShowViewModal(false);
-                      handleEditExamBook(selectedExamBook);
-                    }}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
-                  >
-                    <Edit size={16} />
-                    <span>Edit</span>
-                  </button>
-                )}
+              <div className="mt-6 pt-6 border-t border-gray-200 flex justify-between">
+                <div className="flex space-x-3">
+                  {selectedExamBook.status === 'draft' && (
+                    <>
+                      <button
+                        onClick={() => {
+                          setShowViewModal(false);
+                          handleEditExamBook(selectedExamBook);
+                        }}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
+                      >
+                        <Edit size={16} />
+                        <span>Edit</span>
+                      </button>
+                      <button
+                        onClick={() => handleFinalizeExamBook(selectedExamBook.id)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                      >
+                        <Check size={16} />
+                        <span>Finalize</span>
+                      </button>
+                    </>
+                  )}
+                </div>
                 <button
                   onClick={() => {
                     setShowViewModal(false);
@@ -910,7 +1179,7 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
       {/* Edit Exam Book Modal */}
       {showEditModal && selectedExamBook && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-6xl w-full max-h-[95vh] overflow-y-auto">
+          <div className="bg-white rounded-lg max-w-7xl w-full max-h-[95vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-gray-900">Edit Exam Book</h2>
@@ -918,6 +1187,7 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
                   onClick={() => {
                     setShowEditModal(false);
                     setSelectedExamBook(null);
+                    resetForm();
                   }}
                   className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
@@ -934,28 +1204,38 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
                     <div className="space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Exam Title *
+                          Title *
                         </label>
                         <input
                           type="text"
-                          value={editExamData.title}
-                          onChange={(e) => setEditExamData(prev => ({ ...prev, title: e.target.value }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          placeholder="Enter exam title"
+                          value={formData.title}
+                          onChange={(e) => handleInputChange('title', e.target.value)}
+                          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                            errors.title ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                          }`}
+                          placeholder="Enter exam book title"
                         />
+                        {errors.title && (
+                          <p className="mt-1 text-sm text-red-600">{errors.title}</p>
+                        )}
                       </div>
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Description
+                          Description *
                         </label>
                         <textarea
                           rows={3}
-                          value={editExamData.description}
-                          onChange={(e) => setEditExamData(prev => ({ ...prev, description: e.target.value }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          placeholder="Enter exam description"
+                          value={formData.description}
+                          onChange={(e) => handleInputChange('description', e.target.value)}
+                          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                            errors.description ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                          }`}
+                          placeholder="Enter exam book description"
                         />
+                        {errors.description && (
+                          <p className="mt-1 text-sm text-red-600">{errors.description}</p>
+                        )}
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
@@ -963,58 +1243,75 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Subject *
                           </label>
-                          <select
-                            value={editExamData.subject}
-                            onChange={(e) => setEditExamData(prev => ({ ...prev, subject: e.target.value }))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          >
-                            <option value="">Select subject</option>
-                            {subjects.map(subject => (
-                              <option key={subject} value={subject}>{subject}</option>
-                            ))}
-                          </select>
+                          <input
+                            type="text"
+                            value={formData.subject}
+                            onChange={(e) => handleInputChange('subject', e.target.value)}
+                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                              errors.subject ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                            }`}
+                            placeholder="e.g., Mathematics"
+                          />
+                          {errors.subject && (
+                            <p className="mt-1 text-sm text-red-600">{errors.subject}</p>
+                          )}
                         </div>
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Duration (minutes)
+                            Duration (minutes) *
                           </label>
                           <input
                             type="number"
-                            value={editExamData.duration}
-                            onChange={(e) => setEditExamData(prev => ({ ...prev, duration: parseInt(e.target.value) || 120 }))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            value={formData.duration}
+                            onChange={(e) => handleInputChange('duration', parseInt(e.target.value) || 0)}
+                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                              errors.duration ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                            }`}
                             min="30"
-                            max="300"
+                            placeholder="120"
                           />
+                          {errors.duration && (
+                            <p className="mt-1 text-sm text-red-600">{errors.duration}</p>
+                          )}
                         </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Semester
+                            Semester *
                           </label>
                           <input
                             type="text"
-                            value={editExamData.semester}
-                            onChange={(e) => setEditExamData(prev => ({ ...prev, semester: e.target.value }))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            value={formData.semester}
+                            onChange={(e) => handleInputChange('semester', e.target.value)}
+                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                              errors.semester ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                            }`}
                             placeholder="e.g., Spring 2024"
                           />
+                          {errors.semester && (
+                            <p className="mt-1 text-sm text-red-600">{errors.semester}</p>
+                          )}
                         </div>
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Academic Year
+                            Academic Year *
                           </label>
                           <input
                             type="text"
-                            value={editExamData.academicYear}
-                            onChange={(e) => setEditExamData(prev => ({ ...prev, academicYear: e.target.value }))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            value={formData.academicYear}
+                            onChange={(e) => handleInputChange('academicYear', e.target.value)}
+                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                              errors.academicYear ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                            }`}
                             placeholder="e.g., 2023-2024"
                           />
+                          {errors.academicYear && (
+                            <p className="mt-1 text-sm text-red-600">{errors.academicYear}</p>
+                          )}
                         </div>
                       </div>
 
@@ -1024,10 +1321,10 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
                         </label>
                         <textarea
                           rows={4}
-                          value={editExamData.instructions}
-                          onChange={(e) => setEditExamData(prev => ({ ...prev, instructions: e.target.value }))}
+                          value={formData.instructions}
+                          onChange={(e) => handleInputChange('instructions', e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          placeholder="Enter exam instructions for students"
+                          placeholder="Enter exam instructions for students..."
                         />
                       </div>
                     </div>
@@ -1036,31 +1333,43 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
                   {/* Selected Questions Summary */}
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                      Selected Questions ({editExamData.selectedQuestions.length})
+                      Selected Questions ({selectedQuestions.length})
                     </h3>
-                    
-                    {editExamData.selectedQuestions.length === 0 ? (
-                      <p className="text-gray-500 text-sm">No questions selected yet</p>
-                    ) : (
-                      <div className="space-y-2 max-h-40 overflow-y-auto">
-                        {editExamData.selectedQuestions.map(questionId => {
-                          const question = questions.find(q => q.id === questionId);
-                          return question ? (
-                            <div key={questionId} className="flex items-center justify-between p-2 bg-blue-50 rounded border">
-                              <span className="text-sm text-gray-700 truncate">
-                                {question.subject} - {question.topic}
-                              </span>
-                              <button
-                                onClick={() => handleEditQuestionSelect(questionId)}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <X size={16} />
-                              </button>
-                            </div>
-                          ) : null;
-                        })}
-                      </div>
+                    {errors.questions && (
+                      <p className="mb-2 text-sm text-red-600">{errors.questions}</p>
                     )}
+                    <div className="bg-gray-50 rounded-lg p-4 max-h-64 overflow-y-auto">
+                      {selectedQuestions.length === 0 ? (
+                        <p className="text-gray-500 text-sm">No questions selected yet</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {selectedQuestions.map(questionId => {
+                            const question = getQuestionById(questionId);
+                            return question ? (
+                              <div key={questionId} className="flex items-center justify-between bg-white p-3 rounded border">
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-gray-900 truncate">
+                                    {question.leadQuestion}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    {question.subject} • {question.topic}
+                                  </p>
+                                </div>
+                                <button
+                                  onClick={() => handleQuestionSelect(questionId, false)}
+                                  className="text-red-600 hover:text-red-700 ml-2"
+                                >
+                                  <X size={16} />
+                                </button>
+                              </div>
+                            ) : null;
+                          })}
+                        </div>
+                      )}
+                    </div>
+                    <div className="mt-2 text-sm text-gray-600">
+                      Total Points: {calculateTotalPoints()}
+                    </div>
                   </div>
                 </div>
 
@@ -1070,7 +1379,7 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Questions</h3>
                     
                     {/* Question Filters */}
-                    <div className="space-y-4 mb-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                       <div className="relative">
                         <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                         <input
@@ -1082,98 +1391,81 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
                         />
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <select
-                          value={questionSubjectFilter}
-                          onChange={(e) => setQuestionSubjectFilter(e.target.value)}
-                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        >
-                          <option value="all">All Subjects</option>
-                          {subjects.map(subject => (
-                            <option key={subject} value={subject}>{subject}</option>
-                          ))}
-                        </select>
-
-                        <select
-                          value={questionStatusFilter}
-                          onChange={(e) => setQuestionStatusFilter(e.target.value)}
-                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        >
-                          <option value="approved">Approved Only</option>
-                          <option value="all">All Statuses</option>
-                        </select>
-                      </div>
+                      <select
+                        value={questionSubjectFilter}
+                        onChange={(e) => setQuestionSubjectFilter(e.target.value)}
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="all">All Subjects</option>
+                        {subjects.map(subject => (
+                          <option key={subject} value={subject}>{subject}</option>
+                        ))}
+                      </select>
                     </div>
 
                     {/* Questions List */}
-                    <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
-                      {filteredQuestionsForExam.length === 0 ? (
-                        <div className="p-4 text-center text-gray-500">
-                          No questions found matching your criteria
-                        </div>
-                      ) : (
-                        <div className="divide-y divide-gray-200">
-                          {filteredQuestionsForExam.map(question => (
-                            <div key={question.id} className="p-4 hover:bg-gray-50">
-                              <div className="flex items-start space-x-3">
-                                <input
-                                  type="checkbox"
-                                  checked={editExamData.selectedQuestions.includes(question.id)}
-                                  onChange={() => handleEditQuestionSelect(question.id)}
-                                  className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                />
-                                
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-start justify-between">
-                                    <div className="flex-1">
-                                      <h4 className="text-sm font-medium text-gray-900 mb-1">
-                                        {question.subject} - {question.topic}
-                                      </h4>
-                                      <p className="text-xs text-gray-600 mb-2 line-clamp-2">
-                                        {question.leadQuestion}
-                                      </p>
-                                      <div className="flex items-center space-x-2 text-xs text-gray-500">
-                                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                                          {question.status}
-                                        </span>
-                                        <span>By {question.authorName}</span>
-                                      </div>
-                                    </div>
-                                    
-                                    <button
-                                      onClick={() => handleViewQuestionDetails(question)}
-                                      className="ml-2 text-blue-600 hover:text-blue-700 flex items-center space-x-1"
-                                    >
-                                      <Eye size={14} />
-                                      <span className="text-xs">View</span>
-                                    </button>
-                                  </div>
-                                </div>
+                    <div className="border border-gray-200 rounded-lg max-h-96 overflow-y-auto">
+                      {filteredQuestions.map(question => (
+                        <div key={question.id} className="p-4 border-b border-gray-100 last:border-b-0">
+                          <div className="flex items-start space-x-3">
+                            <input
+                              type="checkbox"
+                              checked={selectedQuestions.includes(question.id)}
+                              onChange={(e) => handleQuestionSelect(question.id, e.target.checked)}
+                              className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between">
+                                <p className="text-sm font-medium text-gray-900 truncate">
+                                  {question.leadQuestion}
+                                </p>
+                                <button
+                                  onClick={() => handleViewQuestionDetails(question.id)}
+                                  className="text-blue-600 hover:text-blue-700 text-sm flex items-center space-x-1 ml-2"
+                                >
+                                  <Eye size={14} />
+                                  <span>View</span>
+                                </button>
                               </div>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {question.subject} • {question.topic} • {question.status}
+                              </p>
+                              <p className="text-xs text-gray-600 mt-1">
+                                By {question.authorName}
+                              </p>
                             </div>
-                          ))}
+                          </div>
                         </div>
-                      )}
+                      ))}
                     </div>
+
+                    {filteredQuestions.length === 0 && (
+                      <div className="text-center py-8 text-gray-500">
+                        <Filter size={48} className="mx-auto mb-4 text-gray-400" />
+                        <p>No approved questions found</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
 
               {/* Modal Actions */}
-              <div className="flex items-center justify-between pt-6 border-t border-gray-200 mt-8">
-                <button
-                  onClick={handleFinalizeExamBook}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
-                >
-                  <CheckCircle size={16} />
-                  <span>Finalize Exam Book</span>
-                </button>
-                
-                <div className="flex items-center space-x-3">
+              <div className="mt-8 pt-6 border-t border-gray-200 flex justify-between">
+                <div className="flex space-x-3">
+                  <button
+                    onClick={() => handleFinalizeExamBook(selectedExamBook.id)}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
+                  >
+                    <Check size={16} />
+                    <span>Finalize</span>
+                  </button>
+                </div>
+                <div className="flex space-x-3">
                   <button
                     onClick={() => {
                       setShowEditModal(false);
                       setSelectedExamBook(null);
+                      resetForm();
                     }}
                     className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                   >
@@ -1181,11 +1473,11 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
                   </button>
                   <button
                     onClick={handleUpdateExamBook}
-                    disabled={isLoading}
+                    disabled={isSubmitting}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center space-x-2"
                   >
                     <Save size={16} />
-                    <span>{isLoading ? 'Updating...' : 'Update Exam Book'}</span>
+                    <span>{isSubmitting ? 'Updating...' : 'Update Exam Book'}</span>
                   </button>
                 </div>
               </div>
@@ -1195,21 +1487,21 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
       )}
 
       {/* Question Details Modal */}
-      {showQuestionDetails && selectedQuestion && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      {showQuestionDetails && selectedQuestionForDetails && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[95vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-start justify-between mb-6">
                 <div>
                   <h2 className="text-xl font-bold text-gray-900 mb-2">Question Details</h2>
                   <p className="text-gray-600">
-                    {selectedQuestion.subject} - {selectedQuestion.topic}
+                    {selectedQuestionForDetails.subject} • {selectedQuestionForDetails.topic}
                   </p>
                 </div>
                 <button
                   onClick={() => {
                     setShowQuestionDetails(false);
-                    setSelectedQuestion(null);
+                    setSelectedQuestionForDetails(null);
                   }}
                   className="text-gray-400 hover:text-gray-600"
                 >
@@ -1218,64 +1510,36 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
               </div>
 
               <div className="space-y-6">
-                {/* Question Metadata */}
-                <div className="grid grid-cols-2 gap-6 text-sm">
-                  <div>
-                    <span className="text-gray-600">Author:</span>
-                    <span className="ml-2 font-medium">{selectedQuestion.authorName}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Created:</span>
-                    <span className="ml-2">{new Date(selectedQuestion.createdAt).toLocaleDateString()}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Status:</span>
-                    <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${
-                      selectedQuestion.status === 'approved' 
-                        ? 'bg-green-100 text-green-800'
-                        : selectedQuestion.status === 'under-review'
-                        ? 'bg-orange-100 text-orange-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {selectedQuestion.status.replace('-', ' ')}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Disease:</span>
-                    <span className="ml-2">{selectedQuestion.disease || 'Not specified'}</span>
-                  </div>
-                </div>
-
                 {/* Clinical Vignette */}
                 <div>
                   <h4 className="font-medium text-gray-900 mb-2">Clinical Vignette</h4>
                   <p className="text-gray-700 bg-blue-50 p-3 rounded-lg whitespace-pre-wrap">
-                    {selectedQuestion.clinicalVignette}
+                    {selectedQuestionForDetails.clinicalVignette}
                   </p>
                 </div>
 
                 {/* Lead Question */}
                 <div>
                   <h4 className="font-medium text-gray-900 mb-2">Lead Question</h4>
-                  <p className="text-gray-700 font-medium">{selectedQuestion.leadQuestion}</p>
+                  <p className="text-gray-700 font-medium">{selectedQuestionForDetails.leadQuestion}</p>
                 </div>
 
                 {/* Answer Options */}
-                {selectedQuestion.options && (
+                {selectedQuestionForDetails.options && (
                   <div>
                     <h4 className="font-medium text-gray-900 mb-2">Answer Options</h4>
                     <div className="space-y-2">
-                      {selectedQuestion.options.map((option, index) => (
+                      {selectedQuestionForDetails.options.map((option, index) => (
                         <div
                           key={index}
                           className={`p-3 rounded-lg ${
-                            option === selectedQuestion.correctAnswer
+                            option === selectedQuestionForDetails.correctAnswer
                               ? 'bg-green-100 text-green-800 font-medium border border-green-200'
                               : 'bg-gray-50 text-gray-700'
                           }`}
                         >
                           {String.fromCharCode(65 + index)}. {option}
-                          {option === selectedQuestion.correctAnswer && (
+                          {option === selectedQuestionForDetails.correctAnswer && (
                             <span className="ml-2 text-green-600 font-bold">(CORRECT)</span>
                           )}
                         </div>
@@ -1285,21 +1549,21 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
                 )}
 
                 {/* Explanation */}
-                {selectedQuestion.explanation && (
+                {selectedQuestionForDetails.explanation && (
                   <div>
                     <h4 className="font-medium text-gray-900 mb-2">Explanation</h4>
                     <p className="text-gray-700 bg-gray-50 p-3 rounded-lg">
-                      {selectedQuestion.explanation}
+                      {selectedQuestionForDetails.explanation}
                     </p>
                   </div>
                 )}
 
                 {/* Learning Objectives */}
-                {selectedQuestion.learningObjective && selectedQuestion.learningObjective.length > 0 && (
+                {selectedQuestionForDetails.learningObjective && selectedQuestionForDetails.learningObjective.length > 0 && (
                   <div>
                     <h4 className="font-medium text-gray-900 mb-2">Learning Objectives</h4>
                     <div className="flex flex-wrap gap-2">
-                      {selectedQuestion.learningObjective.map(objective => (
+                      {selectedQuestionForDetails.learningObjective.map(objective => (
                         <span key={objective} className="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">
                           {objective}
                         </span>
@@ -1309,38 +1573,35 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
                 )}
 
                 {/* References */}
-                {selectedQuestion.references && (
+                {selectedQuestionForDetails.references && (
                   <div>
                     <h4 className="font-medium text-gray-900 mb-2">References</h4>
-                    <p className="text-gray-600 text-sm italic">{selectedQuestion.references}</p>
+                    <p className="text-gray-600 text-sm italic">{selectedQuestionForDetails.references}</p>
                   </div>
                 )}
 
                 {/* Metadata */}
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Question Metadata</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-600">Aspect:</span>
-                      <span className="ml-2 bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                        {selectedQuestion.aspect?.replace('-', ' ')}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Pathomechanism:</span>
-                      <span className="ml-2 bg-purple-100 text-purple-800 px-2 py-1 rounded">
-                        {selectedQuestion.pathomecanism}
-                      </span>
-                    </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">Aspect</h4>
+                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
+                      {selectedQuestionForDetails.aspect?.replace('-', ' ')}
+                    </span>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">Pathomechanism</h4>
+                    <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded text-sm">
+                      {selectedQuestionForDetails.pathomecanism}
+                    </span>
                   </div>
                 </div>
 
                 {/* Tags */}
-                {selectedQuestion.tags.length > 0 && (
+                {selectedQuestionForDetails.tags.length > 0 && (
                   <div>
                     <h4 className="font-medium text-gray-900 mb-2">Tags</h4>
                     <div className="flex flex-wrap gap-2">
-                      {selectedQuestion.tags.map(tag => (
+                      {selectedQuestionForDetails.tags.map(tag => (
                         <span
                           key={tag}
                           className="bg-gray-200 text-gray-700 px-2 py-1 rounded-full text-xs"
@@ -1353,33 +1614,104 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
                 )}
               </div>
 
-              {/* Modal Actions */}
-              <div className="flex items-center justify-between pt-6 border-t border-gray-200 mt-8">
-                <div className="flex items-center space-x-2">
+              {/* Question Selection from Details Modal */}
+              <div className="mt-6 pt-6 border-t border-gray-200 flex justify-between items-center">
+                <div className="flex items-center space-x-3">
                   <input
                     type="checkbox"
-                    checked={createExamData.selectedQuestions.includes(selectedQuestion.id)}
-                    onChange={() => handleQuestionSelect(selectedQuestion.id)}
+                    checked={selectedQuestions.includes(selectedQuestionForDetails.id)}
+                    onChange={(e) => handleQuestionSelect(selectedQuestionForDetails.id, e.target.checked)}
                     className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
                   <span className="text-sm text-gray-700">
-                    {createExamData.selectedQuestions.includes(selectedQuestion.id) 
-                      ? 'Selected for exam' 
-                      : 'Select for exam'
+                    {selectedQuestions.includes(selectedQuestionForDetails.id) 
+                      ? 'Selected for exam book' 
+                      : 'Select for exam book'
                     }
                   </span>
                 </div>
-                
                 <button
                   onClick={() => {
                     setShowQuestionDetails(false);
-                    setSelectedQuestion(null);
+                    setSelectedQuestionForDetails(null);
                   }}
                   className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   Close
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="flex items-center space-x-3 mb-4">
+              <AlertTriangle size={24} className="text-red-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Confirm Delete</h3>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-gray-700">
+                Are you sure you want to delete this exam book? This action cannot be undone.
+              </p>
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setExamBookToDelete(null);
+                }}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteExamBook}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Finalize Confirmation Modal */}
+      {showFinalizeConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="flex items-center space-x-3 mb-4">
+              <Check size={24} className="text-green-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Confirm Finalize</h3>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-gray-700">
+                Are you sure you want to finalize this exam book? Once finalized, it cannot be edited.
+              </p>
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowFinalizeConfirm(false);
+                  setExamBookToFinalize(null);
+                }}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmFinalizeExamBook}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                Finalize
+              </button>
             </div>
           </div>
         </div>
