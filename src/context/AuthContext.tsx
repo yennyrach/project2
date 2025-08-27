@@ -40,16 +40,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       let userProfileData: any = null;
       let userProfileError: any = null;
 
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', supabaseUser.id)
-        .single();
-      
-      console.log('AuthContext - User profile query completed. Data:', data, 'Error:', error);
-      
-      userProfileData = data;
-      userProfileError = error;
+      try {
+        console.log('AuthContext - Executing Supabase query for user ID:', supabaseUser.id);
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', supabaseUser.id)
+          .single();
+        
+        console.log('AuthContext - User profile query completed. Data:', data, 'Error:', error);
+        
+        userProfileData = data;
+        userProfileError = error;
+      } catch (queryException) {
+        console.error('AuthContext - Exception during user profile query:', queryException);
+        console.error('AuthContext - Query exception details:', {
+          message: queryException instanceof Error ? queryException.message : 'Unknown error',
+          stack: queryException instanceof Error ? queryException.stack : 'No stack trace',
+          userId: supabaseUser.id
+        });
+        return null;
+      }
 
       // Handle case where user profile doesn't exist (PGRST116 error)
       if (userProfileError && userProfileError.code === 'PGRST116') {
