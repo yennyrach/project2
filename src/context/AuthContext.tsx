@@ -242,8 +242,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           } catch (error) {
             console.error('AuthContext - Error in fetchAndSetUser during SIGNED_IN:', error);
           } finally {
-            setIsLoading(false);
-            console.log('AuthContext - isLoading set to false, actual state:', isLoading);
+           // Use setTimeout to ensure state update happens after React's reconciliation
+           setTimeout(() => {
+             setIsLoading(false);
+             console.log('AuthContext - isLoading set to false after timeout');
+           }, 0);
           }
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
