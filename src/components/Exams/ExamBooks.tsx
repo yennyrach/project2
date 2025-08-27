@@ -374,6 +374,26 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
         instructions: formData.instructions,
         questions: selectedQuestions,
         semester: formData.semester,
+        academicYear: formData.academicYear,
+      });
+      
+      setShowCreateModal(false);
+      resetForm();
+      setSubmitStatus('success');
+      setSubmitMessage('Exam book created successfully!');
+      setTimeout(() => {
+        setSubmitStatus('idle');
+        setSubmitMessage('');
+      }, 3000);
+    } catch (error) {
+      console.error('Error creating exam book:', error);
+      setSubmitStatus('error');
+      setSubmitMessage('Failed to create exam book. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
