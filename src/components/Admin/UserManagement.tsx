@@ -398,7 +398,7 @@ export const UserManagement: React.FC = () => {
       console.log('Updating user in database:', updatedUser.id);
       
       // Get current database users
-      const currentUsers = getAllUsers();
+      const currentUsers = await getAllUsers();
       
       // Update the specific user
       const updatedUsers = currentUsers.map(u => 
@@ -413,7 +413,7 @@ export const UserManagement: React.FC = () => {
           department: updatedUser.department,
           title: updatedUser.title,
           bio: updatedUser.bio,
-          officeLocation: updatedUser.officeLocation
+          office_location: updatedUser.office_location
         } : u
       );
       
