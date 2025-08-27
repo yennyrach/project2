@@ -92,46 +92,30 @@ export const Login: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // Check if user already exists
-      const existingUsers = JSON.parse(localStorage.getItem('mockDatabase_users') || '[]');
-      const userExists = existingUsers.some((user: any) => user.email === signUpData.email);
-      
-      if (userExists) {
-        setError('An account with this email already exists. Please use a different email or try logging in.');
+      // Use Supabase signup
+      const result = await signUp({
+        email: signUpData.email,
+        password: signUpData.password,
+        firstName: signUpData.firstName,
+        lastName: signUpData.lastName,
+        department: signUpData.department,
+        phoneNumber: signUpData.phoneNumber
+      });
+
+      if (!result.success) {
+        setError(result.error || 'Registration failed. Please try again.');
         setIsLoading(false);
         return;
       }
 
-      // Create new user
-      const newUser = {
-        id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        email: signUpData.email,
-        first_name: signUpData.firstName,
-        last_name: signUpData.lastName,
-        phone_number: signUpData.phoneNumber,
-        department: signUpData.department,
-        roles: [{ type: 'lecturer', permissions: ['dashboard-access', 'settings-access'] }],
-        is_verified: false, // New users start unverified
-        created_at: new Date().toISOString().split('T')[0],
-      };
-
-      // Save to database
-      const updatedUsers = [...existingUsers, newUser];
-      localStorage.setItem('mockDatabase_users', JSON.stringify(updatedUsers));
-
-      // Trigger database update event
-      window.dispatchEvent(new CustomEvent('userDatabaseUpdated', { 
-        detail: { users: updatedUsers } 
-      }));
-
-      // Auto-login the new user
-      const loginSuccess = await login(signUpData.email, 'any-password'); // Mock login accepts any password
+      // Try to auto-login the new user
+      const loginSuccess = await login(signUpData.email, signUpData.password);
       
       if (loginSuccess) {
-        // Registration and login successful
+        // Registration and login successful - user will be redirected by auth state change
         console.log('User registered and logged in successfully');
       } else {
-        // Registration successful but login failed - show success message
+        // Registration successful but auto-login failed - show success message
         setError('');
         alert('Account created successfully! You can now log in with your credentials.');
         setShowSignUp(false);
