@@ -250,10 +250,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('AuthContext - Current isLoading state before login:', isLoading);
     
     try {
+      console.log('AuthContext - BEFORE signInWithPassword call');
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
+      console.log('AuthContext - AFTER signInWithPassword call');
+      console.log('AuthContext - signInWithPassword response data:', data);
+      console.log('AuthContext - signInWithPassword response error:', error);
 
       if (error) {
         console.error('AuthContext - Login error:', error.message);
@@ -268,6 +272,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return true;
       }
 
+      console.log('AuthContext - No user in response data, returning false');
       return false;
     } catch (error) {
       console.error('AuthContext - Login exception:', error);
