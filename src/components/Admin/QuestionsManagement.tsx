@@ -738,7 +738,7 @@ export const QuestionsManagement: React.FC<QuestionsManagementProps> = ({ onCrea
                   </option>
                   {availableReviewers.map(reviewer => (
                     <option key={reviewer.id} value={reviewer.id}>
-                      {reviewer.firstName} {reviewer.lastName} ({reviewer.department})
+                      {reviewer.first_name} {reviewer.last_name} ({reviewer.department})
                     </option>
                   ))}
                 </select>
@@ -772,7 +772,7 @@ export const QuestionsManagement: React.FC<QuestionsManagementProps> = ({ onCrea
                     .filter(reviewer => reviewer.id !== assignmentData.reviewer1)
                     .map(reviewer => (
                     <option key={reviewer.id} value={reviewer.id}>
-                      {reviewer.firstName} {reviewer.lastName} ({reviewer.department})
+                      {reviewer.first_name} {reviewer.last_name} ({reviewer.department})
                     </option>
                   ))}
                 </select>
