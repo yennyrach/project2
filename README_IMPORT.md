@@ -24,7 +24,7 @@ npm run import-questions
 
 Or directly:
 ```bash
-node import_questions.js
+node import_questions.cjs
 ```
 
 ## What the Script Does
