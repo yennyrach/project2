@@ -25,12 +25,20 @@ export const Login: React.FC = () => {
     setError('');
     setIsLoading(true);
 
+    console.log('Login attempt started for email:', email);
     const success = await login(email, password);
+    console.log('Login function returned:', success);
+    
     if (!success) {
+      console.log('Login failed, setting error message');
       setError('Invalid credentials or unverified account. Please check your email and password.');
+    } else {
+      console.log('Login successful');
     }
     
+    console.log('Setting isLoading to false');
     setIsLoading(false);
+    console.log('isLoading state should now be false');
   };
 
   const validateSignUpForm = (): boolean => {
