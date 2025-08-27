@@ -199,6 +199,88 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const signUp = async (userData: {
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+    department?: string;
+    phoneNumber?: string;
+  }): Promise<{ success: boolean; error?: string }> => {
+    console.log('AuthContext - Attempting signup for:', userData.email);
+    setIsLoading(true);
+    
+    try {
+      // Create user in Supabase Auth
+      const { data, error: authError } = await supabase.auth.signUp({
+        email: userData.email,
+        password: userData.password
+      });
+
+      if (authError) {
+        console.error('AuthContext - Signup auth error:', authError.message);
+        setIsLoading(false);
+        return { success: false, error: authError.message };
+      }
+
+      if (!data.user) {
+        console.error('AuthContext - No user returned from signup');
+        setIsLoading(false);
+        return { success: false, error: 'Failed to create user account' };
+      }
+
+      console.log('AuthContext - User created in auth:', data.user.id);
+
+      // Create user profile in users table
+      const { error: profileError } = await supabase
+        .from('users')
+        .insert({
+          id: data.user.id,
+          email: userData.email,
+          first_name: userData.firstName,
+          last_name: userData.lastName,
+          department: userData.department || null,
+          phone_number: userData.phoneNumber || null,
+          is_verified: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+
+      if (profileError) {
+        console.error('AuthContext - Error creating user profile:', profileError.message);
+        setIsLoading(false);
+        return { success: false, error: 'Failed to create user profile' };
+      }
+
+      console.log('AuthContext - User profile created successfully');
+
+      // Assign default lecturer role
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: data.user.id,
+          role_type: 'lecturer',
+          permissions: ['create_questions', 'view_own_questions'],
+          created_at: new Date().toISOString()
+        });
+
+      if (roleError) {
+        console.error('AuthContext - Error assigning user role:', roleError.message);
+        // Don't fail signup if role assignment fails
+      } else {
+        console.log('AuthContext - User role assigned successfully');
+      }
+
+      setIsLoading(false);
+      return { success: true };
+
+    } catch (error) {
+      console.error('AuthContext - Signup exception:', error);
+      setIsLoading(false);
+      return { success: false, error: 'An unexpected error occurred during signup' };
+    }
+  };
+
   const hasRole = (role: string): boolean => {
     return user?.roles.some(r => r.type === role) || false;
   };
