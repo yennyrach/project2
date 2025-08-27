@@ -30,14 +30,11 @@ export const QuestionList: React.FC<QuestionListProps> = ({ onAddQuestion }) => 
     let filteredQuestions = questions;
 
     // Role-based filtering
-    if (hasRole('lecturer') && !hasRole('reviewer') && !hasRole('coordinator') && !hasRole('admin')) {
+    if (hasRole('lecturer') && !hasRole('reviewer') && !hasRole('coordinator')) {
       // Lecturers can see all approved questions and their own questions
       filteredQuestions = questions.filter(q => 
         q.status === 'approved' || q.authorId === user.id
       );
-    } else if (hasRole('admin')) {
-      // Admins can see all questions
-      filteredQuestions = questions;
     }
 
     // Apply search and filters
@@ -67,7 +64,7 @@ export const QuestionList: React.FC<QuestionListProps> = ({ onAddQuestion }) => 
           <p className="text-gray-600">Manage and review questions in the system</p>
         </div>
         
-        {(hasRole('lecturer') || hasRole('admin')) && (
+        {hasRole('lecturer') && (
           <button 
             onClick={onAddQuestion}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"

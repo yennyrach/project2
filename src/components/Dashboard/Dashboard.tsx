@@ -98,7 +98,7 @@ export const Dashboard: React.FC = () => {
       {/* Statistics Grid */}
       {!isUnverified && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {(hasRole('lecturer') || hasRole('admin')) && (
+        {hasRole('lecturer') && (
           <>
             <StatCard
               title="Questions Submitted"
@@ -115,7 +115,7 @@ export const Dashboard: React.FC = () => {
           </>
         )}
 
-        {(hasRole('reviewer') || hasRole('admin')) && (
+        {hasRole('reviewer') && (
           <StatCard
             title="Pending Reviews"
             value={stats.pendingReview}
@@ -124,7 +124,7 @@ export const Dashboard: React.FC = () => {
           />
         )}
 
-        {(hasRole('coordinator') || hasRole('admin')) && (
+        {hasRole('coordinator') && (
           <StatCard
             title="Exam Books"
             value={stats.totalExams}
@@ -186,7 +186,7 @@ export const Dashboard: React.FC = () => {
           </div>
           <div className="p-6">
             <div className="space-y-3">
-              {(hasRole('lecturer') || hasRole('admin')) && (
+              {hasRole('lecturer') && (
                 <button className="w-full text-left p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200">
                   <div className="flex items-center space-x-3">
                     <FileText size={20} className="text-blue-600" />
@@ -198,7 +198,7 @@ export const Dashboard: React.FC = () => {
                 </button>
               )}
               
-              {(hasRole('reviewer') || hasRole('admin')) && (
+              {hasRole('reviewer') && (
                 <button className="w-full text-left p-3 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors border border-orange-200">
                   <div className="flex items-center space-x-3">
                     <CheckCircle size={20} className="text-orange-600" />
@@ -210,7 +210,7 @@ export const Dashboard: React.FC = () => {
                 </button>
               )}
 
-              {(hasRole('coordinator') || hasRole('admin')) && (
+              {hasRole('coordinator') && (
                 <button className="w-full text-left p-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors border border-purple-200">
                   <div className="flex items-center space-x-3">
                     <BookOpen size={20} className="text-purple-600" />

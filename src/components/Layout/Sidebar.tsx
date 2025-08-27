@@ -47,7 +47,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home, roles: ['admin', 'coordinator', 'reviewer', 'lecturer'] },
-    { id: 'questions-management', label: 'Questions Management', icon: FileText, roles: ['admin'] },
+    { id: 'questions-management', label: 'Questions', icon: FileText, roles: ['admin'] },
     { id: 'questions', label: 'Questions', icon: FileText, roles: ['coordinator', 'reviewer', 'lecturer'] },
     { id: 'submit-question', label: 'Submit Question', icon: PlusCircle, roles: ['lecturer'] },
     { id: 'csv-import', label: 'Import/Export CSV', icon: FileText, roles: ['admin', 'coordinator'] },
@@ -92,7 +92,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
   }
 
   const availableItems = menuItems.filter(item =>
-    item.roles.some(role => hasRole(role)) || hasRole('admin')
+    item.roles.some(role => hasRole(role))
   );
 
   return (
