@@ -66,9 +66,9 @@ export const UserManagement: React.FC = () => {
   const itemsPerPage = 25;
 
   // Load users from database with proper typing
-  const loadUsersFromDatabase = () => {
+  const loadUsersFromDatabase = async () => {
     console.log('UserManagement: Loading users from database');
-    const dbUsers = getAllUsers();
+    const dbUsers = await getAllUsers();
     
     // Convert to UserWithStatus format
     const usersWithStatus: UserWithStatus[] = dbUsers.map(user => ({
