@@ -55,53 +55,6 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
   const [selectedQuestionForDetails, setSelectedQuestionForDetails] = useState<Question | null>(null);
 
   // Form data for create/edit
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    subject: '',
-    duration: 120,
-    instructions: '',
-    semester: '',
-    academicYear: '',
-  });
-
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  if (!user || !hasRole('coordinator')) {
-    return (
-      <div className="text-center py-12">
-        <AlertTriangle size={48} className="mx-auto text-red-400 mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Access Denied</h3>
-        <p className="text-gray-600">Only coordinators can access exam book management.</p>
-      </div>
-    );
-  }
-
-  // Load exam books on component mount
-  useEffect(() => {
-    loadExamBooks();
-  }, []);
-
-  // Handle external modal trigger
-  useEffect(() => {
-    if (shouldOpenCreateModal) {
-      setShowCreateModal(true);
-      if (onModalOpened) {
-        onModalOpened();
-      }
-    }
-  }, [shouldOpenCreateModal, onModalOpened]);
-
-  const loadExamBooks = () => {
-    const result = ExamBookStorage.load();
-    if (result.success && result.data) {
-      setExamBooks(result.data);
-      console.log(`Loaded ${result.data.length} exam books`);
-    } else {
-      console.error('Failed to load exam books:', result.error);
-      setExamBooks([]);
-    }
-  };
 
   const saveExamBooks = (updatedExamBooks: ExamBook[]) => {
     const result = ExamBookStorage.save(updatedExamBooks);
