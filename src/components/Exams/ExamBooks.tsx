@@ -423,6 +423,8 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
     console.log('🧪 Running ExamBooks functionality tests...');
     
     // Test 1: Load exam books
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
