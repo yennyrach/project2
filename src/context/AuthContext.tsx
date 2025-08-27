@@ -41,7 +41,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('id', supabaseUser.id)
         .single();
 
-      if (userError) {
+      // Handle case where user profile doesn't exist (PGRST116 error)
+      if (userError && userError.code === 'PGRST116') {
+        console.log('AuthContext - No user profile found, creating new profile for:', supabaseUser.id);
+        
+        // Create new user profile
+        const { data: newUserProfile, error: createError } = await supabase
+          .from('users')
+          .insert({
+            id: supabaseUser.id,
+            email: supabaseUser.email || '',
+            first_name: supabaseUser.email?.split('@')[0] || 'User',
+            last_name: '',
+            is_verified: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('AuthContext - Error creating user profile:', createError);
+          return null;
+        }
+
+        // Assign default lecturer role
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: supabaseUser.id,
+            role_type: 'lecturer',
+            permissions: ['create_questions', 'view_own_questions'],
+            created_at: new Date().toISOString()
+          });
+
+        if (roleError) {
+          console.error('AuthContext - Error assigning user role:', roleError);
+        }
+
+        // Use the newly created profile
+        const userProfile = newUserProfile;
+        console.log('AuthContext - New user profile created:', userProfile);
+      } else if (userError) {
         console.error('AuthContext - Error fetching user profile:', userError);
         return null;
       }
