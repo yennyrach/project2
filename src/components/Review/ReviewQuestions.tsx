@@ -146,7 +146,7 @@ export const ReviewQuestions: React.FC = () => {
         status: statusMap[confirmAction],
         feedback: feedback.trim() || undefined,
         reviewerId: user.id,
-        reviewerName: `${user.firstName} ${user.lastName}`,
+        reviewerName: `${user.first_name} ${user.last_name}`,
         updatedAt: new Date().toISOString().split('T')[0]
       });
       

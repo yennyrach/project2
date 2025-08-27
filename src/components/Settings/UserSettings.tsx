@@ -23,14 +23,14 @@ import {
 } from 'lucide-react';
 
 interface ProfileData {
-  firstName: string;
-  lastName: string;
+  first_name: string;
+  last_name: string;
   email: string;
-  phoneNumber: string;
+  phone_number: string;
   department: string;
   bio: string;
   title: string;
-  officeLocation: string;
+  office_location: string;
 }
 
 interface NotificationSettings {
@@ -72,14 +72,14 @@ export const UserSettings: React.FC = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   
   const [profileData, setProfileData] = useState<ProfileData>({
-    firstName: user?.firstName || '',
-    lastName: user?.lastName || '',
+    first_name: user?.first_name || '',
+    last_name: user?.last_name || '',
     email: user?.email || '',
-    phoneNumber: user?.phoneNumber || '',
+    phone_number: user?.phone_number || '',
     department: user?.department || '',
     bio: user?.bio || '',
     title: user?.title || '',
-    officeLocation: user?.officeLocation || ''
+    office_location: user?.office_location || ''
   });
 
   const [originalProfileData, setOriginalProfileData] = useState<ProfileData>(profileData);
@@ -117,24 +117,24 @@ export const UserSettings: React.FC = () => {
     // Update profile data when user context changes
     if (user) {
       setProfileData({
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
+        first_name: user.first_name || '',
+        last_name: user.last_name || '',
         email: user.email || '',
-        phoneNumber: user.phoneNumber || '',
+        phone_number: user.phone_number || '',
         department: user.department || '',
         bio: user.bio || '',
         title: user.title || '',
-        officeLocation: user.officeLocation || ''
+        office_location: user.office_location || ''
       });
       setOriginalProfileData({
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
+        first_name: user.first_name || '',
+        last_name: user.last_name || '',
         email: user.email || '',
-        phoneNumber: user.phoneNumber || '',
+        phone_number: user.phone_number || '',
         department: user.department || '',
         bio: user.bio || '',
         title: user.title || '',
-        officeLocation: user.officeLocation || ''
+        office_location: user.office_location || ''
       });
     }
   }, [user]);
@@ -143,13 +143,13 @@ export const UserSettings: React.FC = () => {
 
   const validateField = (field: keyof ProfileData, value: string): string | null => {
     switch (field) {
-      case 'firstName':
-      case 'lastName':
+      case 'first_name':
+      case 'last_name':
         return value.trim().length < 2 ? 'Must be at least 2 characters' : null;
       case 'email':
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return !emailRegex.test(value) ? 'Please enter a valid email address' : null;
-      case 'phoneNumber':
+      case 'phone_number':
         if (value && !/^\+?[\d\s\-\(\)]+$/.test(value)) {
           return 'Please enter a valid phone number';
         }
@@ -245,14 +245,14 @@ export const UserSettings: React.FC = () => {
       // Update user context with new profile data
       const updatedUser = {
         ...user,
-        firstName: profileData.firstName,
-        lastName: profileData.lastName,
+        first_name: profileData.first_name,
+        last_name: profileData.last_name,
         email: profileData.email,
-        phoneNumber: profileData.phoneNumber,
+        phone_number: profileData.phone_number,
         department: profileData.department,
         title: profileData.title,
         bio: profileData.bio,
-        officeLocation: profileData.officeLocation
+        office_location: profileData.office_location
       };
       
       console.log('Updated user object:', updatedUser);
@@ -485,17 +485,17 @@ export const UserSettings: React.FC = () => {
                   <User size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                   <input
                     type="text"
-                    value={profileData.firstName}
-                    onChange={(e) => handleProfileChange('firstName', e.target.value)}
+                    value={profileData.first_name}
+                    onChange={(e) => handleProfileChange('first_name', e.target.value)}
                     disabled={!isEditing}
                     className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
                       !isEditing ? 'bg-gray-50 text-gray-600' : 'bg-white'
-                    } ${errors.firstName ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
+                    } ${errors.first_name ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
                     placeholder="Enter your first name"
                   />
                 </div>
-                {errors.firstName && (
-                  <p className="mt-1 text-sm text-red-600">{errors.firstName}</p>
+                {errors.first_name && (
+                  <p className="mt-1 text-sm text-red-600">{errors.first_name}</p>
                 )}
               </div>
 
@@ -508,17 +508,17 @@ export const UserSettings: React.FC = () => {
                   <User size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                   <input
                     type="text"
-                    value={profileData.lastName}
-                    onChange={(e) => handleProfileChange('lastName', e.target.value)}
+                    value={profileData.last_name}
+                    onChange={(e) => handleProfileChange('last_name', e.target.value)}
                     disabled={!isEditing}
                     className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
                       !isEditing ? 'bg-gray-50 text-gray-600' : 'bg-white'
-                    } ${errors.lastName ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
+                    } ${errors.last_name ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
                     placeholder="Enter your last name"
                   />
                 </div>
-                {errors.lastName && (
-                  <p className="mt-1 text-sm text-red-600">{errors.lastName}</p>
+                {errors.last_name && (
+                  <p className="mt-1 text-sm text-red-600">{errors.last_name}</p>
                 )}
               </div>
 
@@ -554,17 +554,17 @@ export const UserSettings: React.FC = () => {
                   <Phone size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                   <input
                     type="tel"
-                    value={profileData.phoneNumber}
-                    onChange={(e) => handleProfileChange('phoneNumber', e.target.value)}
+                    value={profileData.phone_number}
+                    onChange={(e) => handleProfileChange('phone_number', e.target.value)}
                     disabled={!isEditing}
                     className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
                       !isEditing ? 'bg-gray-50 text-gray-600' : 'bg-white'
-                    } ${errors.phoneNumber ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
+                    } ${errors.phone_number ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
                     placeholder="Enter your phone number"
                   />
                 </div>
-                {errors.phoneNumber && (
-                  <p className="mt-1 text-sm text-red-600">{errors.phoneNumber}</p>
+                {errors.phone_number && (
+                  <p className="mt-1 text-sm text-red-600">{errors.phone_number}</p>
                 )}
               </div>
 
@@ -630,8 +630,8 @@ export const UserSettings: React.FC = () => {
               </label>
               <input
                 type="text"
-                value={profileData.officeLocation}
-                onChange={(e) => handleProfileChange('officeLocation', e.target.value)}
+                value={profileData.office_location}
+                onChange={(e) => handleProfileChange('office_location', e.target.value)}
                 disabled={!isEditing}
                 className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
                   !isEditing ? 'bg-gray-50 text-gray-600' : 'bg-white'

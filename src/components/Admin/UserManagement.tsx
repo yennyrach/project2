@@ -29,7 +29,7 @@ import {
 interface UserWithStatus extends User {
   isActive: boolean;
   lastLogin?: string;
-  phoneNumber?: string;
+  phone_number?: string;
 }
 
 interface RoleChangeLog {
@@ -52,7 +52,7 @@ export const UserManagement: React.FC = () => {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [showBulkActions, setShowBulkActions] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [sortField, setSortField] = useState<keyof UserWithStatus>('firstName');
+  const [sortField, setSortField] = useState<keyof UserWithStatus>('first_name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [roleChangeLogs, setRoleChangeLogs] = useState<RoleChangeLog[]>([]);
   const [showConfirmDialog, setShowConfirmDialog] = useState<{
@@ -75,7 +75,7 @@ export const UserManagement: React.FC = () => {
       ...user,
       isActive: true, // Default to active
       lastLogin: user.lastLogin || '2024-01-08', // Default last login
-      phoneNumber: user.phoneNumber || '', // Ensure phone number exists
+      phone_number: user.phone_number || '', // Ensure phone number exists
     }));
     
     console.log('UserManagement: Loaded users:', usersWithStatus.length);
@@ -97,86 +97,86 @@ export const UserManagement: React.FC = () => {
     {
       id: '1',
       email: 'admin@university.edu',
-      firstName: 'Admin',
-      lastName: 'User',
+      first_name: 'Admin',
+      last_name: 'User',
       roles: [{ type: 'admin', permissions: ['manage-users', 'verify-accounts', 'system-config'] }],
-      isVerified: true,
-      createdAt: '2024-01-01',
+      is_verified: true,
+      created_at: '2024-01-01',
       isActive: true,
       lastLogin: '2024-01-08',
-      phoneNumber: '+1-555-0101',
+      phone_number: '+1-555-0101',
       department: 'IT Administration'
     },
     {
       id: '2',
       email: 'coordinator@university.edu',
-      firstName: 'Jane',
-      lastName: 'Coordinator',
+      first_name: 'Jane',
+      last_name: 'Coordinator',
       roles: [
         { type: 'lecturer', permissions: ['dashboard-access', 'settings-access'] }
       ],
-      isVerified: false,
-      createdAt: '2024-01-02',
+      is_verified: false,
+      created_at: '2024-01-02',
       department: 'Computer Science',
       isActive: true,
       lastLogin: '2024-01-07',
-      phoneNumber: '+1-555-0102'
+      phone_number: '+1-555-0102'
     },
     {
       id: '3',
       email: 'reviewer@university.edu',
-      firstName: 'John',
-      lastName: 'Reviewer',
+      first_name: 'John',
+      last_name: 'Reviewer',
       roles: [
         { type: 'lecturer', permissions: ['dashboard-access', 'settings-access'] }
       ],
-      isVerified: false,
-      createdAt: '2024-01-03',
+      is_verified: false,
+      created_at: '2024-01-03',
       department: 'Mathematics',
       isActive: true,
       lastLogin: '2024-01-06',
-      phoneNumber: '+1-555-0103'
+      phone_number: '+1-555-0103'
     },
     {
       id: '4',
       email: 'lecturer@university.edu',
-      firstName: 'Sarah',
-      lastName: 'Lecturer',
+      first_name: 'Sarah',
+      last_name: 'Lecturer',
       roles: [{ type: 'lecturer', permissions: ['dashboard-access', 'settings-access'] }],
-      isVerified: false,
-      createdAt: '2024-01-04',
+      is_verified: false,
+      created_at: '2024-01-04',
       department: 'Physics',
       isActive: true,
       lastLogin: '2024-01-05',
-      phoneNumber: '+1-555-0104'
+      phone_number: '+1-555-0104'
     },
     {
       id: '5',
       email: 'newuser@university.edu',
-      firstName: 'New',
-      lastName: 'User',
+      first_name: 'New',
+      last_name: 'User',
       roles: [{ type: 'lecturer', permissions: ['dashboard-access', 'settings-access'] }],
-      isVerified: false,
-      createdAt: '2024-01-05',
+      is_verified: false,
+      created_at: '2024-01-05',
       department: 'Biology',
       isActive: true,
       lastLogin: '2024-01-08',
-      phoneNumber: '+1-555-0105'
+      phone_number: '+1-555-0105'
     },
     {
       id: '6',
       email: 'pending@university.edu',
-      firstName: 'Pending',
-      lastName: 'Verification',
+      first_name: 'Pending',
+      last_name: 'Verification',
       roles: [
         { type: 'lecturer', permissions: ['dashboard-access', 'settings-access'] }
       ],
-      isVerified: false,
-      createdAt: '2024-01-06',
+      is_verified: false,
+      created_at: '2024-01-06',
       department: 'Chemistry',
       isActive: true,
       lastLogin: '2024-01-09',
-      phoneNumber: '+1-555-0106'
+      phone_number: '+1-555-0106'
     }
   ];
 
@@ -216,18 +216,18 @@ export const UserManagement: React.FC = () => {
   const getFilteredUsers = (): UserWithStatus[] => {
     return users.filter(user => {
       const matchesSearch = 
-        `${user.firstName} ${user.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        `${user.first_name} ${user.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (user.department || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (user.phoneNumber || '').toLowerCase().includes(searchTerm.toLowerCase());
+        (user.phone_number || '').toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesDepartment = selectedDepartment === 'all' || user.department === selectedDepartment;
       const matchesRole = selectedRole === 'all' || user.roles.some(role => role.type === selectedRole);
       const matchesStatus = selectedStatus === 'all' || 
         (selectedStatus === 'active' && user.isActive) ||
         (selectedStatus === 'inactive' && !user.isActive) ||
-        (selectedStatus === 'verified' && user.isVerified) ||
-        (selectedStatus === 'unverified' && !user.isVerified);
+        (selectedStatus === 'verified' && user.is_verified) ||
+        (selectedStatus === 'unverified' && !user.is_verified);
 
       return matchesSearch && matchesDepartment && matchesRole && matchesStatus;
     });
@@ -240,9 +240,9 @@ export const UserManagement: React.FC = () => {
       let bValue = b[sortField];
 
       // Handle special cases
-      if (sortField === 'firstName') {
-        aValue = `${a.firstName} ${a.lastName}`;
-        bValue = `${b.firstName} ${b.lastName}`;
+      if (sortField === 'first_name') {
+        aValue = `${a.first_name} ${a.last_name}`;
+        bValue = `${b.first_name} ${b.last_name}`;
       }
 
       if (typeof aValue === 'string' && typeof bValue === 'string') {
@@ -280,7 +280,7 @@ export const UserManagement: React.FC = () => {
     const log: RoleChangeLog = {
       userId,
       adminId: user.id,
-      adminName: `${user.firstName} ${user.lastName}`,
+      adminName: `${user.first_name} ${user.last_name}`,
       action,
       role,
       timestamp: new Date().toISOString()
@@ -405,11 +405,11 @@ export const UserManagement: React.FC = () => {
         u.id === updatedUser.id ? {
           ...u,
           roles: updatedUser.roles,
-          isVerified: updatedUser.isVerified,
-          firstName: updatedUser.firstName,
-          lastName: updatedUser.lastName,
+          is_verified: updatedUser.is_verified,
+          first_name: updatedUser.first_name,
+          last_name: updatedUser.last_name,
           email: updatedUser.email,
-          phoneNumber: updatedUser.phoneNumber,
+          phone_number: updatedUser.phone_number,
           department: updatedUser.department,
           title: updatedUser.title,
           bio: updatedUser.bio,
@@ -516,7 +516,7 @@ export const UserManagement: React.FC = () => {
             return role;
           });
           
-          const updatedUser = { ...u, isVerified: true, roles: updatedRoles };
+          const updatedUser = { ...u, is_verified: true, roles: updatedRoles };
           console.log('Updated user after verification:', updatedUser);
           
           // Update the user in the database using AuthContext
@@ -563,7 +563,7 @@ export const UserManagement: React.FC = () => {
               const updatedUser = {
                 ...u,
                 isActive: true,
-                isVerified: true,
+                is_verified: true,
                 roles: updatedRoles
               };
               
@@ -605,7 +605,7 @@ export const UserManagement: React.FC = () => {
             
             return {
               ...u,
-              isVerified: true,
+              is_verified: true,
               roles: updatedRoles
             };
           }
@@ -753,7 +753,7 @@ export const UserManagement: React.FC = () => {
             <div>
               <p className="text-sm text-gray-600">Unverified Users</p>
               <p className="text-xl font-semibold text-gray-900">
-                {users.filter(u => !u.isVerified).length}
+                {users.filter(u => !u.is_verified).length}
               </p>
             </div>
           </div>
@@ -767,7 +767,7 @@ export const UserManagement: React.FC = () => {
             <div>
               <p className="text-sm text-gray-600">Verified Users</p>
               <p className="text-xl font-semibold text-gray-900">
-                {users.filter(u => u.isVerified).length}
+                {users.filter(u => u.is_verified).length}
               </p>
             </div>
           </div>
@@ -846,11 +846,11 @@ export const UserManagement: React.FC = () => {
                 </th>
                 <th 
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  onClick={() => handleSort('firstName')}
+                  onClick={() => handleSort('first_name')}
                 >
                   <div className="flex items-center space-x-1">
                     <span>Full Name</span>
-                    {sortField === 'firstName' && (
+                    {sortField === 'first_name' && (
                       <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
                     )}
                   </div>
@@ -911,11 +911,11 @@ export const UserManagement: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                        {user.firstName.charAt(0)}{user.lastName.charAt(0)}
+                        {user.first_name.charAt(0)}{user.last_name.charAt(0)}
                       </div>
                       <div className="ml-3">
                         <div className="text-sm font-medium text-gray-900">
-                          {user.firstName} {user.lastName}
+                          {user.first_name} {user.last_name}
                         </div>
                       </div>
                     </div>
@@ -929,7 +929,7 @@ export const UserManagement: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center text-sm text-gray-900">
                       <Phone size={14} className="mr-2 text-gray-400" />
-                      {user.phoneNumber || 'N/A'}
+                      {user.phone_number || 'N/A'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -993,13 +993,13 @@ export const UserManagement: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center space-x-2">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        user.isVerified
+                        user.is_verified
                           ? 'bg-green-100 text-green-800'
                           : 'bg-orange-100 text-orange-800'
                       }`}>
-                        {user.isVerified ? 'Verified' : 'Pending'}
+                        {user.is_verified ? 'Verified' : 'Pending'}
                       </span>
-                      {!user.isVerified && (
+                      {!user.is_verified && (
                         <button
                           onClick={() => verifyUser(user.id)}
                           className="text-blue-600 hover:text-blue-700 text-xs font-medium"

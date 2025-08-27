@@ -246,7 +246,7 @@ export const SubmitQuestion: React.FC<SubmitQuestionProps> = ({ onSuccess }) => 
       const questionToSubmit = {
         ...questionData,
         authorId: user.id,
-        authorName: `${user.firstName} ${user.lastName}`,
+        authorName: `${user.first_name} ${user.last_name}`,
         status,
         distractorOptions: updatedDistractors,
       } as Omit<Question, 'id' | 'createdAt' | 'updatedAt'>;

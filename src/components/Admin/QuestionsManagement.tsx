@@ -210,9 +210,9 @@ export const QuestionsManagement: React.FC<QuestionsManagementProps> = ({ onCrea
       await updateQuestion(assignmentData.questionId, {
         status: 'under-review',
         reviewerId: assignmentData.reviewer1,
-        reviewerName: `${reviewer1?.firstName} ${reviewer1?.lastName}`,
-        reviewer1: `${reviewer1?.firstName} ${reviewer1?.lastName}`,
-        reviewer2: `${reviewer2?.firstName} ${reviewer2?.lastName}`,
+        reviewerName: `${reviewer1?.first_name} ${reviewer1?.last_name}`,
+        reviewer1: `${reviewer1?.first_name} ${reviewer1?.last_name}`,
+        reviewer2: `${reviewer2?.first_name} ${reviewer2?.last_name}`,
       });
 
       setShowAssignModal(false);
