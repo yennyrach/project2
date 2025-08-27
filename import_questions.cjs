@@ -43,9 +43,11 @@ async function ensureDefaultUser() {
 
   if (error) {
     console.error('Error checking for admin user:', error.message);
+    console.error('Full error object:', JSON.stringify(error, null, 2));
     return null;
   }
 
+  console.log('Existing users query result:', JSON.stringify(existingUsers, null, 2));
   if (existingUsers && existingUsers.length > 0) {
     console.log('Found existing admin user:', existingUsers[0].id);
     return existingUsers[0].id;
@@ -53,6 +55,14 @@ async function ensureDefaultUser() {
 
   // Create default admin user
   console.log('Creating default admin user...');
+  console.log('User data to insert:', JSON.stringify({
+    id: '00000000-0000-0000-0000-000000000001',
+    email: 'admin@university.edu',
+    first_name: 'Admin',
+    last_name: 'User',
+    is_verified: true
+  }, null, 2));
+
   const defaultUser = {
     id: '00000000-0000-0000-0000-000000000001', // Fixed UUID for consistency
     email: 'admin@university.edu',
@@ -69,24 +79,31 @@ async function ensureDefaultUser() {
     .select()
     .single();
 
+  console.log('User insert result - data:', JSON.stringify(newUser, null, 2));
+  console.log('User insert result - error:', JSON.stringify(insertError, null, 2));
   if (insertError) {
     console.error('Error creating default admin user:', insertError.message);
+    console.error('Full insert error object:', JSON.stringify(insertError, null, 2));
     return null;
   }
 
   // Create admin role
+  console.log('Creating admin role for user:', defaultUser.id);
   const adminRole = {
     user_id: defaultUser.id,
     role_type: 'admin',
     permissions: ['manage-users', 'verify-accounts', 'system-config']
   };
 
+  console.log('Role data to insert:', JSON.stringify(adminRole, null, 2));
   const { error: roleError } = await supabase
     .from('user_roles')
     .insert([adminRole]);
 
+  console.log('Role insert result - error:', JSON.stringify(roleError, null, 2));
   if (roleError) {
     console.error('Error creating admin role:', roleError.message);
+    console.error('Full role error object:', JSON.stringify(roleError, null, 2));
   }
 
   console.log('Created default admin user:', newUser.id);
