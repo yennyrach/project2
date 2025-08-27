@@ -24,7 +24,7 @@ export const ReviewQuestions: React.FC = () => {
 
   // Get questions assigned to current reviewer
   const assignedQuestions = questions.filter(q => 
-    q.status === 'under-review' && q.reviewerId === user.id
+    q.status === 'under-review' && (q.reviewerId === user.id || hasRole('admin'))
   );
 
   // Get questions that need review (unassigned) - all reviewers can see these
