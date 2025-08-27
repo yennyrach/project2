@@ -16,6 +16,10 @@ if (!supabaseUrl || !supabaseServiceKey) {
   process.exit(1);
 }
 
+// --- Initialize Supabase Client ---
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+console.log('Supabase client initialized successfully');
+
 
 // --- CSV File Path ---
 const csvFilePath = './questions_export.csv';
