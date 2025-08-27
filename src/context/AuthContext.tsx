@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User } from '../types';
+import { User, Role } from '../types';
+import { supabase } from '../lib/supabase';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
@@ -9,258 +11,184 @@ interface AuthContextType {
   hasPermission: (permission: string) => boolean;
   updateUserProfile: (user: User) => Promise<boolean>;
   isLoading: boolean;
-  getAllUsers: () => User[];
-  refreshUserDatabase: () => void;
-  title?: string;
-  bio?: string;
-  officeLocation?: string;
+  getAllUsers: () => Promise<User[]>;
+  refreshUserDatabase: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock users for demonstration - this will be our "database"
-let mockUsers: User[] = [
-  {
-    id: '1',
-    email: 'admin@university.edu',
-    firstName: 'Admin',
-    lastName: 'User',
-    roles: [{ type: 'admin', permissions: ['manage-users', 'verify-accounts', 'system-config'] }],
-    isVerified: true,
-    createdAt: '2024-01-01',
-  },
-  {
-    id: '2',
-    email: 'coordinator@university.edu',
-    firstName: 'Jane',
-    lastName: 'Coordinator',
-    roles: [
-      { type: 'lecturer', permissions: ['dashboard-access', 'settings-access'] }
-    ],
-    isVerified: false,
-    createdAt: '2024-01-02',
-    department: 'Computer Science',
-  },
-  {
-    id: '3',
-    email: 'reviewer@university.edu',
-    firstName: 'John',
-    lastName: 'Reviewer',
-    roles: [
-      { type: 'lecturer', permissions: ['dashboard-access', 'settings-access'] }
-    ],
-    isVerified: false,
-    createdAt: '2024-01-03',
-    department: 'Mathematics',
-  },
-  {
-    id: '4',
-    email: 'lecturer@university.edu',
-    firstName: 'Sarah',
-    lastName: 'Lecturer',
-    roles: [{ type: 'lecturer', permissions: ['dashboard-access', 'settings-access'] }],
-    isVerified: false,
-    createdAt: '2024-01-04',
-    department: 'Physics',
-  },
-  {
-    id: '5',
-    email: 'newuser@university.edu',
-    firstName: 'New',
-    lastName: 'User',
-    roles: [{ type: 'lecturer', permissions: ['dashboard-access', 'settings-access'] }],
-    isVerified: false,
-    createdAt: '2024-01-08',
-    department: 'Biology',
-  },
-  {
-    id: '6',
-    email: 'pending@university.edu',
-    firstName: 'Pending',
-    lastName: 'Verification',
-    roles: [{ type: 'lecturer', permissions: ['dashboard-access', 'settings-access'] }],
-    isVerified: false,
-    createdAt: '2024-01-09',
-    department: 'Chemistry',
-  },
-];
-
-// Simulate database operations
-const UserDatabase = {
-  // Load users from localStorage (simulating database)
-  loadUsers: (): User[] => {
-    const savedUsers = localStorage.getItem('mockDatabase_users');
-    if (savedUsers) {
-      try {
-        const parsedUsers = JSON.parse(savedUsers);
-        // Merge with default users, giving preference to saved data
-        const defaultUserIds = mockUsers.map(u => u.id);
-        const savedUserIds = parsedUsers.map((u: User) => u.id);
-        
-        // Keep saved users and add any new default users
-        const mergedUsers = [
-          ...parsedUsers,
-          ...mockUsers.filter(u => !savedUserIds.includes(u.id))
-        ];
-        
-        mockUsers = mergedUsers;
-        return mergedUsers;
-      } catch (error) {
-        console.error('Error loading users from localStorage:', error);
-        return mockUsers;
-      }
-    }
-    return mockUsers;
-  },
-
-  // Save users to localStorage (simulating database)
-  saveUsers: (users: User[]): boolean => {
-    try {
-      localStorage.setItem('mockDatabase_users', JSON.stringify(users));
-      mockUsers = users;
-      // Broadcast user database update event
-      window.dispatchEvent(new CustomEvent('userDatabaseUpdated', { 
-        detail: { users: users } 
-      }));
-      return true;
-    } catch (error) {
-      console.error('Error saving users to localStorage:', error);
-      return false;
-    }
-  },
-
-  // Find user by email
-  findUserByEmail: (email: string): User | undefined => {
-    return mockUsers.find(u => u.email === email);
-  },
-
-  // Update user in database
-  updateUser: (updatedUser: User): boolean => {
-    const userIndex = mockUsers.findIndex(u => u.id === updatedUser.id);
-    if (userIndex !== -1) {
-      mockUsers[userIndex] = updatedUser;
-      console.log('UserDatabase: User updated in database:', updatedUser.id, updatedUser.firstName, updatedUser.lastName);
-      return UserDatabase.saveUsers(mockUsers);
-    }
-    return false;
-  },
-
-  // Get all users (for admin interface)
-  getAllUsers: (): User[] => {
-    console.log('UserDatabase: Loading all users for admin interface');
-    return UserDatabase.loadUsers();
-  },
-
-  // Find user by ID
-  findUserById: (id: string): User | undefined => {
-    return mockUsers.find(u => u.id === id);
-  }
-};
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
+  // Helper function to fetch user profile and roles from Supabase
+  const fetchAndSetUser = async (supabaseUser: SupabaseUser): Promise<User | null> => {
+    try {
+      console.log('AuthContext - Fetching user profile for:', supabaseUser.id);
+      
+      // Fetch user profile from users table
+      const { data: userProfile, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', supabaseUser.id)
+        .single();
+
+      if (userError) {
+        console.error('AuthContext - Error fetching user profile:', userError);
+        return null;
+      }
+
+      if (!userProfile) {
+        console.error('AuthContext - No user profile found for:', supabaseUser.id);
+        return null;
+      }
+
+      console.log('AuthContext - User profile fetched:', userProfile);
+
+      // Fetch user roles
+      const { data: userRoles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('*')
+        .eq('user_id', supabaseUser.id);
+
+      if (rolesError) {
+        console.error('AuthContext - Error fetching user roles:', rolesError);
+        // Continue without roles rather than failing completely
+      }
+
+      console.log('AuthContext - User roles fetched:', userRoles);
+
+      // Transform roles to match our interface
+      const roles: Role[] = (userRoles || []).map(role => ({
+        type: role.role_type as 'admin' | 'coordinator' | 'reviewer' | 'lecturer',
+        permissions: role.permissions || []
+      }));
+
+      // Create user object matching our interface
+      const completeUser: User = {
+        id: userProfile.id,
+        email: userProfile.email,
+        first_name: userProfile.first_name,
+        last_name: userProfile.last_name,
+        roles: roles,
+        is_verified: userProfile.is_verified || false,
+        created_at: userProfile.created_at,
+        department: userProfile.department,
+        phone_number: userProfile.phone_number,
+        title: userProfile.title,
+        bio: userProfile.bio,
+        office_location: userProfile.office_location,
+        updated_at: userProfile.updated_at
+      };
+
+      console.log('AuthContext - Complete user object created:', completeUser);
+      setUser(completeUser);
+      return completeUser;
+
+    } catch (error) {
+      console.error('AuthContext - Error in fetchAndSetUser:', error);
+      return null;
+    }
+  };
+
+  // Initialize auth state and set up listener
   useEffect(() => {
-    // Initialize database
-    UserDatabase.loadUsers();
+    console.log('AuthContext - Initializing auth state...');
     
-    const savedUser = localStorage.getItem('currentUser');
-    if (savedUser) {
+    // Get initial session
+    const initializeAuth = async () => {
       try {
-        const parsedUser = JSON.parse(savedUser);
-        console.log('AuthContext - Loading user from localStorage:', parsedUser);
+        const { data: { session }, error } = await supabase.auth.getSession();
         
-        // Verify user still exists in database and get latest data
-        const dbUser = UserDatabase.findUserByEmail(parsedUser.email);
-        if (dbUser) {
-          console.log('AuthContext - Syncing with database user:', dbUser);
-          setUser(dbUser);
-          // Update localStorage with latest database data
-          localStorage.setItem('currentUser', JSON.stringify(dbUser));
+        if (error) {
+          console.error('AuthContext - Error getting session:', error);
+          setIsLoading(false);
+          return;
+        }
+
+        if (session?.user) {
+          console.log('AuthContext - Found existing session for user:', session.user.id);
+          await fetchAndSetUser(session.user);
         } else {
-          // User no longer exists in database, clear session
-          localStorage.removeItem('currentUser');
-          setUser(null);
+          console.log('AuthContext - No existing session found');
         }
       } catch (error) {
-        console.error('Error parsing saved user:', error);
-        localStorage.removeItem('currentUser');
-        setUser(null);
-      }
-    }
-    
-    // Listen for profile updates
-    const handleProfileUpdate = () => {
-      const updatedUser = localStorage.getItem('currentUser');
-      if (updatedUser) {
-        const parsedUser = JSON.parse(updatedUser);
-        console.log('AuthContext - Profile updated:', parsedUser);
-        setUser(parsedUser);
+        console.error('AuthContext - Error initializing auth:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
-    
-    window.addEventListener('userProfileUpdated', handleProfileUpdate);
-    
+
+    initializeAuth();
+
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('AuthContext - Auth state changed:', event, session?.user?.id);
+        
+        if (event === 'SIGNED_IN' && session?.user) {
+          await fetchAndSetUser(session.user);
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+        } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+          // Optionally refresh user data on token refresh
+          await fetchAndSetUser(session.user);
+        }
+      }
+    );
+
+    // Cleanup subscription on unmount
     return () => {
-      window.removeEventListener('userProfileUpdated', handleProfileUpdate);
+      subscription.unsubscribe();
     };
   }, []);
 
-  const updateUserProfile = async (updatedUser: User): Promise<boolean> => {
-    console.log('AuthContext - Updating user profile:', updatedUser);
+  const login = async (email: string, password: string): Promise<boolean> => {
+    console.log('AuthContext - Attempting login for:', email);
+    setIsLoading(true);
     
     try {
-      // Update database first
-      const dbUpdateSuccess = UserDatabase.updateUser(updatedUser);
-      if (!dbUpdateSuccess) {
-        throw new Error('Failed to update user in database');
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        console.error('AuthContext - Login error:', error.message);
+        setIsLoading(false);
+        return false;
       }
-      
-      console.log('AuthContext - Database updated successfully');
-      
-      // Update local state
-      setUser(updatedUser);
-      
-      // Update localStorage session
-      localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-      
-      console.log('AuthContext - Local state and session updated');
-      
-      // Trigger profile update event
-      window.dispatchEvent(new Event('userProfileUpdated'));
-      
-      console.log('AuthContext - Profile update completed successfully');
-      return true;
+
+      if (data.user) {
+        console.log('AuthContext - Login successful for user:', data.user.id);
+        // fetchAndSetUser will be called by the auth state change listener
+        setIsLoading(false);
+        return true;
+      }
+
+      setIsLoading(false);
+      return false;
     } catch (error) {
-      console.error('Profile update failed:', error);
+      console.error('AuthContext - Login exception:', error);
+      setIsLoading(false);
       return false;
     }
   };
 
-  const login = async (email: string, password: string): Promise<boolean> => {
-    console.log('AuthContext - Attempting login for:', email);
-    
-    // Load latest user data from database
-    UserDatabase.loadUsers();
-    
-    // Simple mock authentication - find user in database
-    const foundUser = UserDatabase.findUserByEmail(email);
-    if (foundUser) {
-      console.log('AuthContext - User found in database:', foundUser);
-      setUser(foundUser);
-      localStorage.setItem('currentUser', JSON.stringify(foundUser));
-      console.log('AuthContext - Login successful');
-      return true;
-    }
-    console.log('AuthContext - Login failed: user not found');
-    return false;
-  };
-
-  const logout = () => {
+  const logout = async () => {
     console.log('AuthContext - Logging out user');
-    setUser(null);
-    localStorage.removeItem('currentUser');
+    
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('AuthContext - Logout error:', error.message);
+      } else {
+        console.log('AuthContext - Logout successful');
+        // setUser(null) will be called by the auth state change listener
+      }
+    } catch (error) {
+      console.error('AuthContext - Logout exception:', error);
+    }
   };
 
   const hasRole = (role: string): boolean => {
@@ -271,16 +199,118 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return user?.roles.some(role => role.permissions.includes(permission)) || false;
   };
 
-  const getAllUsers = (): User[] => {
-    console.log('AuthContext: getAllUsers called');
-    return UserDatabase.getAllUsers();
+  const updateUserProfile = async (updatedUser: User): Promise<boolean> => {
+    console.log('AuthContext - Updating user profile:', updatedUser.id);
+    
+    try {
+      // Prepare data for Supabase (snake_case)
+      const updateData = {
+        first_name: updatedUser.first_name,
+        last_name: updatedUser.last_name,
+        email: updatedUser.email,
+        phone_number: updatedUser.phone_number,
+        department: updatedUser.department,
+        title: updatedUser.title,
+        bio: updatedUser.bio,
+        office_location: updatedUser.office_location,
+        is_verified: updatedUser.is_verified,
+        updated_at: new Date().toISOString()
+      };
+
+      const { error } = await supabase
+        .from('users')
+        .update(updateData)
+        .eq('id', updatedUser.id);
+
+      if (error) {
+        console.error('AuthContext - Error updating user profile:', error.message);
+        return false;
+      }
+
+      console.log('AuthContext - User profile updated successfully');
+      
+      // Re-fetch user data to ensure consistency
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (currentUser) {
+        await fetchAndSetUser(currentUser);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('AuthContext - Exception updating user profile:', error);
+      return false;
+    }
   };
 
-  const refreshUserDatabase = (): void => {
-    console.log('AuthContext: refreshUserDatabase called');
-    UserDatabase.loadUsers();
-    // Trigger a re-render by dispatching an event
-    window.dispatchEvent(new Event('userDatabaseRefresh'));
+  const getAllUsers = async (): Promise<User[]> => {
+    console.log('AuthContext - Fetching all users');
+    
+    try {
+      // Fetch all users
+      const { data: users, error: usersError } = await supabase
+        .from('users')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (usersError) {
+        console.error('AuthContext - Error fetching users:', usersError.message);
+        return [];
+      }
+
+      if (!users) {
+        console.log('AuthContext - No users found');
+        return [];
+      }
+
+      // Fetch all user roles
+      const { data: allRoles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('*');
+
+      if (rolesError) {
+        console.error('AuthContext - Error fetching roles:', rolesError.message);
+        // Continue without roles
+      }
+
+      // Combine users with their roles
+      const usersWithRoles: User[] = users.map(userProfile => {
+        const userRoles = (allRoles || []).filter(role => role.user_id === userProfile.id);
+        
+        const roles: Role[] = userRoles.map(role => ({
+          type: role.role_type as 'admin' | 'coordinator' | 'reviewer' | 'lecturer',
+          permissions: role.permissions || []
+        }));
+
+        return {
+          id: userProfile.id,
+          email: userProfile.email,
+          first_name: userProfile.first_name,
+          last_name: userProfile.last_name,
+          roles: roles,
+          is_verified: userProfile.is_verified || false,
+          created_at: userProfile.created_at,
+          department: userProfile.department,
+          phone_number: userProfile.phone_number,
+          title: userProfile.title,
+          bio: userProfile.bio,
+          office_location: userProfile.office_location,
+          updated_at: userProfile.updated_at
+        };
+      });
+
+      console.log('AuthContext - Fetched users with roles:', usersWithRoles.length);
+      return usersWithRoles;
+    } catch (error) {
+      console.error('AuthContext - Exception fetching all users:', error);
+      return [];
+    }
+  };
+
+  const refreshUserDatabase = async (): Promise<void> => {
+    console.log('AuthContext - Refreshing user database');
+    // This function can be used to trigger a refresh of user data
+    // For now, it's mainly used by components that need to refresh user lists
+    await getAllUsers();
   };
 
   return (

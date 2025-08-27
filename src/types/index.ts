@@ -1,15 +1,17 @@
 export interface User {
   id: string;
   email: string;
-  firstName: string;
-  lastName: string;
+  first_name: string;
+  last_name: string;
   roles: Role[];
-  isVerified: boolean;
-  createdAt: string;
+  is_verified: boolean;
+  created_at: string;
   department?: string;
-  phoneNumber?: string;
-  lastLogin?: string;
-  isActive?: boolean;
+  phone_number?: string;
+  title?: string;
+  bio?: string;
+  office_location?: string;
+  updated_at?: string;
 }
 
 export interface Role {
