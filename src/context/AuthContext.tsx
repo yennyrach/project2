@@ -35,6 +35,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('AuthContext - Fetching user profile for:', supabaseUser.id);
       console.log('AuthContext - fetchAndSetUser called, current isLoading:', isLoading);
       
+      console.log('AuthContext - Starting user profile query...');
       // Fetch user profile from users table
       let userProfileData: any = null;
       let userProfileError: any = null;
@@ -45,6 +46,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('id', supabaseUser.id)
         .single();
       
+      console.log('AuthContext - User profile query completed. Data:', data, 'Error:', error);
+      
       userProfileData = data;
       userProfileError = error;
 
@@ -52,6 +55,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (userProfileError && userProfileError.code === 'PGRST116') {
         console.log('AuthContext - No user profile found, creating new profile for:', supabaseUser.id);
         
+        console.log('AuthContext - Attempting to create new user profile...');
         // Create new user profile
         const { data: newProfile, error: createError } = await supabase
           .from('users')
@@ -67,11 +71,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .select()
           .single();
 
+        console.log('AuthContext - User profile creation result. Data:', newProfile, 'Error:', createError);
+
         if (createError) {
           console.error('AuthContext - Error creating user profile:', createError);
           return null;
         }
 
+        console.log('AuthContext - Attempting to assign default role...');
         // Assign default lecturer role
         const { error: roleError } = await supabase
           .from('user_roles')
@@ -81,6 +88,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             permissions: ['create_questions', 'view_own_questions'],
             created_at: new Date().toISOString()
           });
+
+        console.log('AuthContext - Role assignment result. Error:', roleError);
 
         if (roleError) {
           console.error('AuthContext - Error assigning user role:', roleError);
@@ -101,11 +110,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log('AuthContext - User profile fetched:', userProfileData);
 
+      console.log('AuthContext - Starting user roles query...');
       // Fetch user roles
       const { data: userRoles, error: rolesError } = await supabase
         .from('user_roles')
         .select('*')
         .eq('user_id', supabaseUser.id);
+
+      console.log('AuthContext - User roles query completed. Data:', userRoles, 'Error:', rolesError);
 
       if (rolesError) {
         console.error('AuthContext - Error fetching user roles:', rolesError);
@@ -114,12 +126,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log('AuthContext - User roles fetched:', userRoles);
 
+      console.log('AuthContext - Transforming roles...');
       // Transform roles to match our interface
       const roles: Role[] = (userRoles || []).map(role => ({
         type: role.role_type as 'admin' | 'coordinator' | 'reviewer' | 'lecturer',
         permissions: role.permissions || []
       }));
 
+      console.log('AuthContext - Creating complete user object...');
       // Create user object matching our interface
       const completeUser: User = {
         id: userProfileData.id,
@@ -138,7 +152,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
 
       console.log('AuthContext - Complete user object created:', completeUser);
+      console.log('AuthContext - About to set user in state...');
       setUser(completeUser);
+      console.log('AuthContext - User set in state successfully');
       console.log('AuthContext - User set in state, current isLoading:', isLoading);
       return completeUser;
 
