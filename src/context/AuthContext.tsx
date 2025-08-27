@@ -3,6 +3,15 @@ import { User, Role } from '../types';
 import { supabase } from '../lib/supabase';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
+// Define role permissions
+const ROLE_PERMISSIONS: { [key: string]: string[] } = {
+  admin: ['manage-users', 'verify-accounts', 'system-config', 'dashboard-access', 'settings-access', 'create-exams', 'manage-questions', 'view-questions', 'review-questions', 'approve-questions', 'submit-questions', 'view-own-questions'],
+  coordinator: ['create-exams', 'manage-questions', 'view-questions', 'dashboard-access', 'settings-access', 'submit-questions', 'view-own-questions'],
+  reviewer: ['review-questions', 'approve-questions', 'view-questions', 'dashboard-access', 'settings-access', 'submit-questions', 'view-own-questions'],
+  lecturer: ['submit-questions', 'view-own-questions', 'dashboard-access', 'settings-access', 'view-questions'], // Default lecturer permissions
+  'restricted-lecturer': ['dashboard-access', 'settings-access'] // For unverified or newly created users
+};
+
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<boolean>;
@@ -21,6 +30,7 @@ interface AuthContextType {
   isLoading: boolean;
   getAllUsers: () => Promise<User[]>;
   refreshUserDatabase: () => Promise<void>;
+  updateUserRolesInDb: (userId: string, newRoles: Role[], markVerified?: boolean) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -528,6 +538,78 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await getAllUsers();
   };
 
+  const updateUserRolesInDb = async (userId: string, newRoles: Role[], markVerified: boolean = false): Promise<boolean> => {
+    console.log(`AuthContext - Updating roles for user ${userId}. New roles:`, newRoles, `Mark verified: ${markVerified}`);
+    try {
+      // Ensure user always has at least the restricted lecturer role if no other roles are provided
+      let finalRolesToInsert = newRoles;
+      if (newRoles.length === 0) {
+        finalRolesToInsert = [{ type: 'lecturer', permissions: ROLE_PERMISSIONS['restricted-lecturer'] }];
+        console.log(`AuthContext - User ${userId} has no specific roles, assigning restricted lecturer role.`);
+      }
+
+      // 1. Delete existing roles for the user
+      const { error: deleteError } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', userId);
+
+      if (deleteError) {
+        console.error('AuthContext - Error deleting existing roles:', deleteError);
+        return false;
+      }
+      console.log(`AuthContext - Existing roles for ${userId} deleted.`);
+
+      // 2. Insert new roles
+      const rolesToInsert = finalRolesToInsert.map(role => ({
+        user_id: userId,
+        role_type: role.type,
+        permissions: ROLE_PERMISSIONS[role.type] || [] // Use predefined permissions
+      }));
+
+      const { error: insertError } = await supabase
+        .from('user_roles')
+        .insert(rolesToInsert);
+
+      if (insertError) {
+        console.error('AuthContext - Error inserting new roles:', insertError);
+        return false;
+      }
+      console.log(`AuthContext - New roles inserted for ${userId}.`);
+
+      // 3. Update user's verification status if requested or if a non-restricted role is assigned
+      const shouldMarkVerified = markVerified || (finalRolesToInsert.length > 0 && finalRolesToInsert.some(r => r.type !== 'lecturer' || (r.type === 'lecturer' && r.permissions !== ROLE_PERMISSIONS['restricted-lecturer'])));
+
+      if (shouldMarkVerified) {
+        const { error: verifyError } = await supabase
+          .from('users')
+          .update({ is_verified: true, updated_at: new Date().toISOString() })
+          .eq('id', userId);
+
+        if (verifyError) {
+          console.error('AuthContext - Error updating user verification status:', verifyError);
+        } else {
+          console.log(`AuthContext - User ${userId} marked as verified.`);
+        }
+      }
+
+      // 4. Re-fetch user data to update the context state
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (currentUser && currentUser.id === userId) { // Only refresh if it's the current logged-in user
+        await fetchAndSetUser(currentUser);
+      } else {
+        // If it's not the current user, we need to trigger a refresh for the UserManagement component
+        window.dispatchEvent(new CustomEvent('userDatabaseRefresh'));
+      }
+
+      console.log(`AuthContext - Roles and verification status updated successfully for user ${userId}.`);
+      return true;
+    } catch (error) {
+      console.error('AuthContext - Exception in updateUserRolesInDb:', error);
+      return false;
+    }
+  };
+
   return (
     <AuthContext.Provider value={{ 
       user, 
@@ -539,7 +621,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       updateUserProfile,
       isLoading,
       getAllUsers,
-      refreshUserDatabase
+      refreshUserDatabase,
+      updateUserRolesInDb
     }}>
       {children}
     </AuthContext.Provider>
