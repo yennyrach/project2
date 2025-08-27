@@ -35,18 +35,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('AuthContext - Fetching user profile for:', supabaseUser.id);
       
       // Fetch user profile from users table
-      const { data: userProfile, error: userError } = await supabase
+      let userProfileData: any = null;
+      let userProfileError: any = null;
+
+      const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('id', supabaseUser.id)
         .single();
+      
+      userProfileData = data;
+      userProfileError = error;
 
       // Handle case where user profile doesn't exist (PGRST116 error)
-      if (userError && userError.code === 'PGRST116') {
+      if (userProfileError && userProfileError.code === 'PGRST116') {
         console.log('AuthContext - No user profile found, creating new profile for:', supabaseUser.id);
         
         // Create new user profile
-        const { data: newUserProfile, error: createError } = await supabase
+        const { data: newProfile, error: createError } = await supabase
           .from('users')
           .insert({
             id: supabaseUser.id,
@@ -80,19 +86,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         // Use the newly created profile
-        const userProfile = newUserProfile;
-        console.log('AuthContext - New user profile created:', userProfile);
-      } else if (userError) {
-        console.error('AuthContext - Error fetching user profile:', userError);
+        userProfileData = newProfile;
+        console.log('AuthContext - New user profile created:', userProfileData);
+      } else if (userProfileError) {
+        console.error('AuthContext - Error fetching user profile:', userProfileError);
         return null;
       }
 
-      if (!userProfile) {
+      if (!userProfileData) {
         console.error('AuthContext - No user profile found for:', supabaseUser.id);
         return null;
       }
 
-      console.log('AuthContext - User profile fetched:', userProfile);
+      console.log('AuthContext - User profile fetched:', userProfileData);
 
       // Fetch user roles
       const { data: userRoles, error: rolesError } = await supabase
@@ -115,19 +121,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Create user object matching our interface
       const completeUser: User = {
-        id: userProfile.id,
-        email: userProfile.email,
-        first_name: userProfile.first_name,
-        last_name: userProfile.last_name,
+        id: userProfileData.id,
+        email: userProfileData.email,
+        first_name: userProfileData.first_name,
+        last_name: userProfileData.last_name,
         roles: roles,
-        is_verified: userProfile.is_verified || false,
-        created_at: userProfile.created_at,
-        department: userProfile.department,
-        phone_number: userProfile.phone_number,
-        title: userProfile.title,
-        bio: userProfile.bio,
-        office_location: userProfile.office_location,
-        updated_at: userProfile.updated_at
+        is_verified: userProfileData.is_verified || false,
+        created_at: userProfileData.created_at,
+        department: userProfileData.department,
+        phone_number: userProfileData.phone_number,
+        title: userProfileData.title,
+        bio: userProfileData.bio,
+        office_location: userProfileData.office_location,
+        updated_at: userProfileData.updated_at
       };
 
       console.log('AuthContext - Complete user object created:', completeUser);
