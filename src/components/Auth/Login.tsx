@@ -18,7 +18,7 @@ export const Login: React.FC = () => {
     phoneNumber: ''
   });
   const [signUpErrors, setSignUpErrors] = useState<Record<string, string>>({});
-  const { login } = useAuth();
+  const { login, signUp } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
