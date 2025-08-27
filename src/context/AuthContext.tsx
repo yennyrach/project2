@@ -56,8 +56,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Create a timeout promise
         const timeoutPromise = new Promise((_, reject) => {
           setTimeout(() => {
-            reject(new Error('Query timeout after 10 seconds'));
-          }, 30000);
+            reject(new Error('Query timeout after 60 seconds'));
+          }, 60000);
         });
         
         // Create the query promise
@@ -66,7 +66,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .select('id, email, first_name, last_name, department, phone_number, title, bio, office_location, is_verified, created_at, updated_at')
           .eq('id', supabaseUser.id);
         
-        console.log('AuthContext - Starting query with 30-second timeout...');
+        console.log('AuthContext - Starting query with 60-second timeout...');
         const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
         
         console.log('AuthContext - User profile query completed. Data:', data, 'Error:', error);

@@ -68,7 +68,7 @@ export const QuestionsManagement: React.FC<QuestionsManagementProps> = ({ onCrea
     
     try {
       // Get all users from the database
-      const allUsers = getAllUsers();
+      const allUsers = await getAllUsers();
       console.log('QuestionsManagement: Total users found:', allUsers.length);
       
       // Filter users who have reviewer role and are verified
