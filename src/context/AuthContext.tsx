@@ -182,12 +182,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('AuthContext - Auth state changed:', event, session?.user?.id);
         
         if (event === 'SIGNED_IN' && session?.user) {
-          await fetchAndSetUser(session.user);
+          setIsLoading(true);
+          try {
+            await fetchAndSetUser(session.user);
+          } catch (error) {
+            console.error('AuthContext - Error in fetchAndSetUser during SIGNED_IN:', error);
+          } finally {
+            setIsLoading(false);
+          }
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
+          setIsLoading(false);
         } else if (event === 'TOKEN_REFRESHED' && session?.user) {
           // Optionally refresh user data on token refresh
-          await fetchAndSetUser(session.user);
+          try {
+            await fetchAndSetUser(session.user);
+          } catch (error) {
+            console.error('AuthContext - Error in fetchAndSetUser during TOKEN_REFRESHED:', error);
+          }
         }
       }
     );
@@ -200,7 +212,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string): Promise<boolean> => {
     console.log('AuthContext - Attempting login for:', email);
-    setIsLoading(true);
     
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -210,22 +221,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) {
         console.error('AuthContext - Login error:', error.message);
-        setIsLoading(false);
         return false;
       }
 
       if (data.user) {
         console.log('AuthContext - Login successful for user:', data.user.id);
         // fetchAndSetUser will be called by the auth state change listener
-        setIsLoading(false);
         return true;
       }
 
-      setIsLoading(false);
       return false;
     } catch (error) {
       console.error('AuthContext - Login exception:', error);
-      setIsLoading(false);
       return false;
     }
   };
