@@ -2,12 +2,38 @@
 
 ## Prerequisites
 
+**IMPORTANT: RLS Security Consideration**
+
+This import script needs to create users and insert questions, which may be blocked by Row Level Security (RLS) policies. You have two options:
+
+### Option A: Use Service Role Key (Recommended)
+1. Go to your Supabase project dashboard
+2. Navigate to Settings → API
+3. Copy your "service_role" key (keep this secret!)
+4. Add it to your `.env` file as `SUPABASE_SERVICE_ROLE_KEY`
+
+### Option B: Temporarily Disable RLS
+1. Go to your Supabase SQL Editor
+2. Run: `ALTER TABLE public.users DISABLE ROW LEVEL SECURITY;`
+3. Run the import script
+4. Re-enable RLS: `ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;`
+
 1. **Export your questions**: Go to your app's "Import/Export CSV" section and export your existing questions. Save the file as `questions_export.csv` in the project root directory.
 
-2. **Supabase Setup**: Make sure you have:
+2. **Environment Variables**: Make sure your `.env` file contains:
+   ```
+   VITE_SUPABASE_URL="your-supabase-url"
+   SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
+   ```
+   OR (if using Option B above):
+   ```
+   VITE_SUPABASE_URL="your-supabase-url"
+   VITE_SUPABASE_ANON_KEY="your-supabase-anon-key"
+   ```
+
+3. **Supabase Setup**: Make sure you have:
    - Created your Supabase project
    - Run the database creation queries (tables and RLS policies)
-   - Your `.env` file contains the correct Supabase credentials
 
 ## Running the Import
 

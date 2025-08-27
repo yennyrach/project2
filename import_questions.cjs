@@ -5,17 +5,17 @@ const { parse } = require('csv-parse');
 
 // --- Supabase Configuration ---
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Supabase URL and Anon Key are required. Check your .env file.');
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error('Supabase URL and Service Role Key (or Anon Key) are required. Check your .env file.');
   console.log('Make sure your .env file contains:');
   console.log('VITE_SUPABASE_URL="your-supabase-url"');
-  console.log('VITE_SUPABASE_ANON_KEY="your-supabase-anon-key"');
+  console.log('SUPABASE_SERVICE_ROLE_KEY="your-service-role-key" (recommended for import)');
+  console.log('OR VITE_SUPABASE_ANON_KEY="your-supabase-anon-key" (if RLS is disabled)');
   process.exit(1);
 }
 
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // --- CSV File Path ---
 const csvFilePath = './questions_export.csv';
