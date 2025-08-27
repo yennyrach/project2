@@ -374,57 +374,6 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
         instructions: formData.instructions,
         questions: selectedQuestions,
         semester: formData.semester,
-        academicYear: formData.academicYear,
-      };
-
-      const updatedExamBooks = examBooks.map(book => 
-        book.id === selectedExamBook.id ? updatedExamBook : book
-      );
-      
-      if (saveExamBooks(updatedExamBooks)) {
-        setSubmitStatus('success');
-        setSubmitMessage('Exam book updated successfully!');
-        setShowEditModal(false);
-        setSelectedExamBook(null);
-        resetForm();
-        console.log('Exam book updated successfully:', updatedExamBook.id);
-      } else {
-        throw new Error('Failed to save exam book');
-      }
-    } catch (error) {
-      console.error('Error updating exam book:', error);
-      setSubmitStatus('error');
-      setSubmitMessage('Failed to update exam book. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-      setTimeout(() => {
-        setSubmitStatus('idle');
-        setSubmitMessage('');
-      }, 3000);
-    }
-  };
-
-  // View question details
-  const handleViewQuestionDetails = (questionId: string) => {
-    const question = questions.find(q => q.id === questionId);
-    if (question) {
-      setSelectedQuestionForDetails(question);
-      setShowQuestionDetails(true);
-    }
-  };
-
-  // Get question by ID
-  const getQuestionById = (questionId: string): Question | undefined => {
-    return questions.find(q => q.id === questionId);
-  };
-
-  // Test functionality
-  const runTests = () => {
-    console.log('🧪 Running ExamBooks functionality tests...');
-    
-    // Test 1: Load exam books
-  };
-
   return (
     <div className="space-y-6">
       {/* Header */}
