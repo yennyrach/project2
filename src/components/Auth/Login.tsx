@@ -20,6 +20,12 @@ export const Login: React.FC = () => {
   const [signUpErrors, setSignUpErrors] = useState<Record<string, string>>({});
   const { login, signUp } = useAuth();
 
+  // Auto-fill with test credentials for debugging
+  React.useEffect(() => {
+    setEmail('yennyrach@apps.ipb.ac.id');
+    setPassword('IPByenny_24');
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -28,6 +34,7 @@ export const Login: React.FC = () => {
     console.log('Login attempt started for email:', email);
     const success = await login(email, password);
     console.log('Login function returned:', success);
+    console.log('Current loading state after login call:', isLoading);
     
     if (!success) {
       console.log('Login failed, setting error message');
@@ -38,7 +45,7 @@ export const Login: React.FC = () => {
     
     console.log('Setting isLoading to false');
     setIsLoading(false);
-    console.log('isLoading state should now be false');
+    console.log('isLoading state should now be false, actual state:', isLoading);
   };
 
   const validateSignUpForm = (): boolean => {

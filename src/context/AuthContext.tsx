@@ -33,6 +33,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchAndSetUser = async (supabaseUser: SupabaseUser): Promise<User | null> => {
     try {
       console.log('AuthContext - Fetching user profile for:', supabaseUser.id);
+      console.log('AuthContext - fetchAndSetUser called, current isLoading:', isLoading);
       
       // Fetch user profile from users table
       let userProfileData: any = null;
@@ -138,10 +139,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log('AuthContext - Complete user object created:', completeUser);
       setUser(completeUser);
+      console.log('AuthContext - User set in state, current isLoading:', isLoading);
       return completeUser;
 
     } catch (error) {
       console.error('AuthContext - Error in fetchAndSetUser:', error);
+      console.log('AuthContext - fetchAndSetUser error, current isLoading:', isLoading);
       return null;
     }
   };
@@ -180,19 +183,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('AuthContext - Auth state changed:', event, session?.user?.id);
+        console.log('AuthContext - Auth state change, current isLoading:', isLoading);
         
         if (event === 'SIGNED_IN' && session?.user) {
           setIsLoading(true);
+          console.log('AuthContext - isLoading set to true, actual state:', isLoading);
           try {
             await fetchAndSetUser(session.user);
+            console.log('AuthContext - fetchAndSetUser completed successfully');
           } catch (error) {
             console.error('AuthContext - Error in fetchAndSetUser during SIGNED_IN:', error);
           } finally {
             setIsLoading(false);
+            console.log('AuthContext - isLoading set to false, actual state:', isLoading);
           }
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
           setIsLoading(false);
+          console.log('AuthContext - SIGNED_OUT processed, isLoading set to false');
         } else if (event === 'TOKEN_REFRESHED' && session?.user) {
           // Optionally refresh user data on token refresh
           try {
@@ -212,6 +220,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string): Promise<boolean> => {
     console.log('AuthContext - Attempting login for:', email);
+    console.log('AuthContext - Current isLoading state before login:', isLoading);
     
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -221,11 +230,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) {
         console.error('AuthContext - Login error:', error.message);
+        console.log('AuthContext - Login failed, current isLoading:', isLoading);
         return false;
       }
 
       if (data.user) {
         console.log('AuthContext - Login successful for user:', data.user.id);
+        console.log('AuthContext - Login successful, current isLoading:', isLoading);
         // fetchAndSetUser will be called by the auth state change listener
         return true;
       }
@@ -233,6 +244,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return false;
     } catch (error) {
       console.error('AuthContext - Login exception:', error);
+      console.log('AuthContext - Login exception, current isLoading:', isLoading);
       return false;
     }
   };
