@@ -111,7 +111,11 @@ export const Login: React.FC = () => {
       });
 
       if (!result.success) {
-        setError(result.error || 'Registration failed. Please try again.');
+        if (result.error?.includes('User already registered') || result.error?.includes('user_already_exists')) {
+          setError('An account with this email already exists. Please use the login form or try a different email address.');
+        } else {
+          setError(result.error || 'Registration failed. Please try again.');
+        }
         setIsLoading(false);
         return;
       }
