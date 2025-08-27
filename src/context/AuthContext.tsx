@@ -50,6 +50,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         console.log('AuthContext - User profile query completed. Data:', data, 'Error:', error);
         
+        console.log('AuthContext - User profile query completed. Data:', data, 'Error:', error);
+        
         userProfileData = data;
         userProfileError = error;
       } catch (queryException) {
@@ -127,6 +129,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('user_roles')
         .select('*')
         .eq('user_id', supabaseUser.id);
+
+      console.log('AuthContext - User roles query completed. Data:', userRoles, 'Error:', rolesError);
 
       console.log('AuthContext - User roles query completed. Data:', userRoles, 'Error:', rolesError);
 
