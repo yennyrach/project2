@@ -42,10 +42,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       try {
         console.log('AuthContext - Executing Supabase query for user ID:', supabaseUser.id);
-        const { data, error } = await supabase
+        
+        // Create a timeout promise
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => {
+            reject(new Error('Query timeout after 10 seconds'));
+          }, 10000);
+        });
+        
+        // Create the query promise
+        const queryPromise = supabase
           .from('users')
-          .select('*')
+          .select('id, email, first_name, last_name, department, phone_number, title, bio, office_location, is_verified, created_at, updated_at')
           .eq('id', supabaseUser.id);
+        
+        console.log('AuthContext - Starting query with 10-second timeout...');
+        const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
         
         console.log('AuthContext - User profile query completed. Data:', data, 'Error:', error);
         
@@ -56,6 +68,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         userProfileError = error;
       } catch (queryException) {
         console.error('AuthContext - Exception during user profile query:', queryException);
+        
+        // Check if it's a timeout error
+        if (queryException instanceof Error && queryException.message.includes('timeout')) {
+          console.error('AuthContext - QUERY TIMED OUT after 10 seconds');
+        }
+        
         console.error('AuthContext - Query exception details:', {
           message: queryException instanceof Error ? queryException.message : 'Unknown error',
           stack: queryException instanceof Error ? queryException.stack : 'No stack trace',
@@ -313,6 +331,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     
     try {
+      console.log('AuthContext - Starting Supabase auth signup...');
       // Create user in Supabase Auth
       const { data, error: authError } = await supabase.auth.signUp({
         email: userData.email,
@@ -332,6 +351,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       console.log('AuthContext - User created in auth:', data.user.id);
+      console.log('AuthContext - Attempting to insert into public.users table...');
 
       // Create user profile in users table
       const { error: profileError } = await supabase
@@ -355,6 +375,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       console.log('AuthContext - User profile created successfully');
+      console.log('AuthContext - Attempting to insert into public.user_roles table...');
 
       // Assign default lecturer role
       const { error: roleError } = await supabase
