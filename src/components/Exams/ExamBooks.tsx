@@ -375,23 +375,54 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
         questions: selectedQuestions,
         semester: formData.semester,
         academicYear: formData.academicYear,
-      });
+      };
+
+      const updatedExamBooks = examBooks.map(book => 
+        book.id === selectedExamBook.id ? updatedExamBook : book
+      );
       
-      setShowCreateModal(false);
-      resetForm();
-      setSubmitStatus('success');
-      setSubmitMessage('Exam book created successfully!');
+      if (saveExamBooks(updatedExamBooks)) {
+        setSubmitStatus('success');
+        setSubmitMessage('Exam book updated successfully!');
+        setShowEditModal(false);
+        setSelectedExamBook(null);
+        resetForm();
+        console.log('Exam book updated successfully:', selectedExamBook.id);
+      } else {
+        throw new Error('Failed to save exam book');
+      }
+    } catch (error) {
+      console.error('Error updating exam book:', error);
+      setSubmitStatus('error');
+      setSubmitMessage('Failed to update exam book. Please try again.');
+    } finally {
+      setIsSubmitting(false);
       setTimeout(() => {
         setSubmitStatus('idle');
         setSubmitMessage('');
       }, 3000);
-    } catch (error) {
-      console.error('Error creating exam book:', error);
-      setSubmitStatus('error');
-      setSubmitMessage('Failed to create exam book. Please try again.');
-    } finally {
-      setIsSubmitting(false);
     }
+  };
+
+  // Helper function to get question by ID
+  const getQuestionById = (questionId: string): Question | null => {
+    return questions.find(q => q.id === questionId) || null;
+  };
+
+  // Handle view question details
+  const handleViewQuestionDetails = (questionId: string) => {
+    const question = getQuestionById(questionId);
+    if (question) {
+      setSelectedQuestionForDetails(question);
+      setShowQuestionDetails(true);
+    }
+  };
+
+  // Test function
+  const runTests = () => {
+    console.log('Running tests...');
+    console.log('Exam books:', examBooks);
+    console.log('Questions:', questions);
   };
 
   return (
