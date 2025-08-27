@@ -423,57 +423,6 @@ export const ExamBooks: React.FC<ExamBooksProps> = ({
     console.log('🧪 Running ExamBooks functionality tests...');
     
     // Test 1: Load exam books
-    console.log('Test 1: Loading exam books...');
-    loadExamBooks();
-    console.log('✅ Load exam books test completed');
-    
-    // Test 2: Create a test exam book
-    console.log('Test 2: Creating test exam book...');
-    const testExamBook: ExamBook = {
-      id: 'test_exam_' + Date.now(),
-      title: 'Test Exam Book',
-      description: 'Test Description',
-      subject: 'Test Subject',
-      totalPoints: 10,
-      duration: 120,
-      instructions: 'Test instructions',
-      questions: ['1', '2'],
-      createdBy: user.id,
-      createdAt: new Date().toISOString().split('T')[0],
-      status: 'draft',
-      semester: 'Test Semester',
-      academicYear: 'Test Year',
-    };
-    
-    const testExamBooks = [testExamBook, ...examBooks];
-    if (saveExamBooks(testExamBooks)) {
-      console.log('✅ Create exam book test passed');
-    } else {
-      console.log('❌ Create exam book test failed');
-    }
-    
-    // Test 3: View functionality
-    console.log('Test 3: Testing view functionality...');
-    handleViewExamBook(testExamBook);
-    console.log('✅ View functionality test completed');
-    
-    // Test 4: Edit functionality
-    console.log('Test 4: Testing edit functionality...');
-    handleEditExamBook(testExamBook);
-    console.log('✅ Edit functionality test completed');
-    
-    // Test 5: Delete functionality
-    console.log('Test 5: Testing delete functionality...');
-    const updatedAfterDelete = examBooks.filter(book => book.id !== testExamBook.id);
-    if (saveExamBooks(updatedAfterDelete)) {
-      console.log('✅ Delete functionality test passed');
-    } else {
-      console.log('❌ Delete functionality test failed');
-    }
-    
-    console.log('🎉 All tests completed! Check console for results.');
-  };
-
   return (
     <div className="space-y-6">
       {/* Header */}
