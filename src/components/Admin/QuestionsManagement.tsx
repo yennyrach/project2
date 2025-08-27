@@ -74,9 +74,9 @@ export const QuestionsManagement: React.FC<QuestionsManagementProps> = ({ onCrea
       // Filter users who have reviewer role and are verified
       const reviewers = allUsers.filter(user => {
         const hasReviewerRole = user.roles.some((role: Role) => role.type === 'reviewer');
-        const isVerified = user.isVerified;
+        const isVerified = user.is_verified;
         
-        console.log(`User ${user.firstName} ${user.lastName}:`, {
+        console.log(`User ${user.first_name} ${user.last_name}:`, {
           hasReviewerRole,
           isVerified,
           roles: user.roles.map(r => r.type)
@@ -88,7 +88,7 @@ export const QuestionsManagement: React.FC<QuestionsManagementProps> = ({ onCrea
       console.log('QuestionsManagement: Available reviewers found:', reviewers.length);
       console.log('QuestionsManagement: Reviewer details:', reviewers.map(r => ({
         id: r.id,
-        name: `${r.firstName} ${r.lastName}`,
+        name: `${r.first_name} ${r.last_name}`,
         department: r.department
       })));
       
