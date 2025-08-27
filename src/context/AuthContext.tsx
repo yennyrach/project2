@@ -45,14 +45,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data, error } = await supabase
           .from('users')
           .select('*')
-          .eq('id', supabaseUser.id)
-          .single();
+          .eq('id', supabaseUser.id);
         
         console.log('AuthContext - User profile query completed. Data:', data, 'Error:', error);
         
         console.log('AuthContext - User profile query completed. Data:', data, 'Error:', error);
         
-        userProfileData = data;
+        // Handle data as an array
+        userProfileData = data && data.length > 0 ? data[0] : null;
         userProfileError = error;
       } catch (queryException) {
         console.error('AuthContext - Exception during user profile query:', queryException);
