@@ -111,9 +111,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('AuthContext - Attempting to assign default role...');
         // Assign default lecturer role
         const { error: roleError } = await supabase
-            // Treat timeout as "no user found" to trigger profile creation
-            userProfileError = { code: 'PGRST116' };
-            userProfileData = null;
           .from('user_roles')
           .insert({
             user_id: supabaseUser.id,
