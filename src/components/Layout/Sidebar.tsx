@@ -22,18 +22,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
   if (!user) return null;
 
   // Check if user is unverified (restricted access)
-  const isUnverified = !user.isVerified;
+  const isUnverified = !user.is_verified;
   
   // Debug logging
   console.log('Sidebar - User verification status:', {
     userId: user.id,
-    isVerified: user.isVerified,
+    isVerified: user.is_verified,
     isUnverified,
     roles: user.roles,
     permissions: user.roles.flatMap(r => r.permissions)
   });
   
-  const hasRestrictedAccess = !isUnverified && user.roles.some(role => 
+  const hasRestrictedAccess = !isUnverified && user.roles.some(role =>
     role.permissions.includes('dashboard-access') && 
     role.permissions.includes('settings-access') && 
     role.permissions.length === 2

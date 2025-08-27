@@ -11,7 +11,7 @@ export const Dashboard: React.FC = () => {
   if (!user) return null;
 
   // Check if user is unverified
-  const isUnverified = !user.isVerified;
+  const isUnverified = !user.is_verified;
 
   // Calculate statistics based on user role
   const getStatistics = () => {
@@ -61,7 +61,7 @@ export const Dashboard: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Welcome back, {user.firstName}!</h2>
+        <h2 className="text-2xl font-bold text-gray-900">Welcome back, {user.first_name}!</h2>
         <p className="text-gray-600">
           {isUnverified 
             ? 'Your account is pending verification. Contact an administrator for full access.'
@@ -239,11 +239,11 @@ export const Dashboard: React.FC = () => {
                 <AlertTriangle size={48} className="mx-auto text-orange-400 mb-4" />
                 <h4 className="text-lg font-medium text-gray-900 mb-2">Verification Pending</h4>
                 <p className="text-gray-600 mb-4">
-                  Your account was created on {new Date(user.createdAt).toLocaleDateString()} and is awaiting administrator verification.
+                  Your account was created on {new Date(user.created_at).toLocaleDateString()} and is awaiting administrator verification.
                 </p>
                 <div className="bg-gray-50 rounded-lg p-4">
                   <p className="text-sm text-gray-700">
-                    <strong>Account Type:</strong> {user.roles.map(r => r.type).join(', ')}<br/>
+                    <strong>Account Type:</strong> {user.roles.map(r => r.type).join(', ')}<br />
                     <strong>Department:</strong> {user.department || 'Not specified'}<br/>
                     <strong>Status:</strong> Unverified
                   </p>

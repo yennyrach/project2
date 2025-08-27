@@ -75,7 +75,7 @@ export const Header: React.FC = () => {
                 <User size={16} className="text-white" />
               </div>
               <div className="text-left">
-                <p className="text-sm font-medium text-gray-900">{user.firstName} {user.lastName}</p>
+                <p className="text-sm font-medium text-gray-900">{user.first_name} {user.last_name}</p>
                 <p className="text-xs text-gray-600">{roleLabels}</p>
               </div>
             </button>

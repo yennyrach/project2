@@ -106,13 +106,13 @@ export const Login: React.FC = () => {
       const newUser = {
         id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         email: signUpData.email,
-        firstName: signUpData.firstName,
-        lastName: signUpData.lastName,
-        phoneNumber: signUpData.phoneNumber,
+        first_name: signUpData.firstName,
+        last_name: signUpData.lastName,
+        phone_number: signUpData.phoneNumber,
         department: signUpData.department,
         roles: [{ type: 'lecturer', permissions: ['dashboard-access', 'settings-access'] }],
-        isVerified: false, // New users start unverified
-        createdAt: new Date().toISOString().split('T')[0],
+        is_verified: false, // New users start unverified
+        created_at: new Date().toISOString().split('T')[0],
       };
 
       // Save to database
